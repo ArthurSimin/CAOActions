@@ -82,6 +82,9 @@
       { "file": "littlelogistics.png", "v": 1 },
       { "file": "taczammo.png", "v": 1 },
       { "file": "cbcatech.png", "v": 1 },
+      { "file": "linearbearing.png", "v": 1 },
+      { "file": "bellsnwhistles", "v": 1 },
+      { "file": "ballon.png", "v": 1 },
       { "file": "spawn.png", "v": 1 }
     ]
   },
