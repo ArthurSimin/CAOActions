@@ -3,6 +3,8 @@ package com.sockywocky.createaddonorganizer.client;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -21,8 +23,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -94,6 +94,16 @@ public class ColorPickerScreen extends Screen {
 
     private int previewY;
     private int panelTop;
+    private static final int PICKER_MAX_W = 300;
+    private static final int PICKER_INSET = 24;
+    private static final int CONTRAST_PAD = 5;
+    private static final int EMBED_PAD = 10;
+    private int contentX;
+    private int contentW;
+    private int controlW = PICKER_MAX_W;
+    private int galleryColumns = 1;
+    private int contrastY;
+    private int contrastH;
     private static final int ROW_H = 20;
     private static final int FULL_ROW_GAP = 6;
     private static final int FULL_SQUARE_H = 100;
@@ -110,7 +120,49 @@ public class ColorPickerScreen extends Screen {
     private final GradientTexture svSquareTexture = new GradientTexture("sv_square");
     private final GradientTexture hueBarTexture = new GradientTexture("hue_bar");
 
+    private boolean embedded;
+    private int embedX;
+    private int embedY;
+    private int embedW;
+    private int embedH;
+    private Runnable onEmbeddedDone;
+
+    public void embedInto(int x, int y, int width, int height, Runnable onDone) {
+        this.embedded = true;
+        this.embedX = x;
+        this.embedY = y;
+        this.embedW = width;
+        this.embedH = height;
+        this.onEmbeddedDone = onDone;
+    }
+
+    public boolean isEmbedded() {
+        return embedded;
+    }
+
+    public void releaseEmbedded() {
+        svSquareTexture.release();
+        hueBarTexture.release();
+    }
+
+    private int areaTop() {
+        return embedded ? embedY : 0;
+    }
+
+    private int areaBottom() {
+        return embedded ? embedY + embedH : this.height;
+    }
+
+    private int areaCenterX() {
+        return embedded ? embedX + embedW / 2 : this.width / 2;
+    }
+
     public ColorPickerScreen(Screen parent, ResourceLocation id, Component sectionName, boolean isMainTab) {
+        this(parent, id, sectionName, isMainTab, false);
+    }
+
+    public ColorPickerScreen(Screen parent, ResourceLocation id, Component sectionName, boolean isMainTab,
+            boolean highlightOnly) {
         super(Component.translatable("createaddonorganizer.colors.pick"));
         this.parent = parent;
         this.id = id;
@@ -171,7 +223,7 @@ public class ColorPickerScreen extends Screen {
         this.boxOpacity = Config.boxOpacityFor(id);
 
         this.isMainTab = isMainTab;
-        this.highlightOnly = SimulatedSupport.isMainTab(id);
+        this.highlightOnly = highlightOnly || SimulatedSupport.isMainTab(id);
         if (highlightOnly) {
             this.target = EditTarget.HIGHLIGHT;
         }
@@ -188,25 +240,34 @@ public class ColorPickerScreen extends Screen {
 
     @Override
     protected void init() {
-        int buttonsY = this.height - 28;
-        this.panelTop = 34;
+        computeRegions();
+        int doneY = areaBottom() - MenuLayout.ROW_H - 4;
+        this.panelTop = areaTop() + MenuLayout.ROW_1;
+        this.contrastH = 0;
 
         if (highlightOnly) {
             initHighlightPanel();
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.ok"), b -> confirm())
-                    .bounds(this.width / 2 - 102, buttonsY, 100, 20).build());
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.cancel"), b -> onClose())
-                    .bounds(this.width / 2 + 2, buttonsY, 78, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("?"), b -> {})
-                    .bounds(this.width / 2 + 84, buttonsY, 18, 20)
-                    .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.simulatedUneditable")))
-                    .build());
+            int helpW = MenuLayout.ROW_H;
+            int pair = MenuLayout.split(contentW - helpW - MenuLayout.GAP, 2);
+            GlassButton help = new GlassButton(contentX, doneY, helpW, MenuLayout.ROW_H,
+                    Component.literal("?"), b -> {});
+            help.setTooltip(Tooltip.create(
+                    Component.translatable("createaddonorganizer.colors.simulatedUneditable")));
+            addRenderableWidget(help);
+            addRenderableWidget(new GlassButton(contentX + helpW + MenuLayout.GAP, doneY, pair, MenuLayout.ROW_H,
+                    Component.translatable("createaddonorganizer.colors.cancel"), b -> onClose()));
+            addRenderableWidget(new GlassButton(contentX + contentW - pair, doneY, pair, MenuLayout.ROW_H,
+                    Component.translatable("createaddonorganizer.colors.ok"), b -> confirm())
+                    .style(GlassButton.Style.ACCENT));
             return;
         }
 
         boolean previewTop = Config.bannerEditorPreviewTop();
-        this.previewY = previewTop ? 32 : this.height - 52;
-        this.panelTop = previewTop ? 58 : 34;
+        this.previewY = previewTop ? areaTop() + MenuLayout.DESC_Y : areaBottom() - 52;
+        this.panelTop = areaTop() + (previewTop
+                ? MenuLayout.DESC_Y + BannerTextures.HEIGHT + 8
+                : MenuLayout.DESC_Y);
+        int buttonsY = doneY - MenuLayout.GAP;
         int contentBottom = previewTop ? buttonsY : Math.min(buttonsY, this.previewY - 8);
         computeLayoutScale(contentBottom - this.panelTop);
 
@@ -218,46 +279,71 @@ public class ColorPickerScreen extends Screen {
         }
 
         if (DevMode.isUnlocked()) {
-            Button screenshotButton = addRenderableWidget(Button.builder(
-                            Component.translatable("createaddonorganizer.banner.screenshot"),
-                            b -> captureScreenshot())
-                    .bounds(6, 6, 100, 20).build());
+            GlassButton screenshotButton = addRenderableWidget(new GlassButton(6, 6, 100, 20,
+                    Component.translatable("createaddonorganizer.banner.screenshot"),
+                    b -> captureScreenshot()));
             screenshotButton.active = hasBanner();
 
-            addRenderableWidget(Button.builder(
-                            Component.translatable("createaddonorganizer.banner.screenshot.openFolder"),
-                            b -> BannerScreenshot.openFolder())
-                    .bounds(6, 28, 130, 20).build());
+            addRenderableWidget(new GlassButton(6, 28, 130, 20,
+                    Component.translatable("createaddonorganizer.banner.screenshot.openFolder"),
+                    b -> BannerScreenshot.openFolder()));
         }
 
+        int parts = isMainTab ? 3 : 2;
+        int each = MenuLayout.split(contentW, parts);
+        int slot = 0;
         if (isMainTab) {
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.highlightButton"), b -> {
-                        target = EditTarget.HIGHLIGHT;
+            boolean editingHighlight = target == EditTarget.HIGHLIGHT;
+            addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot++), doneY,
+                    each, MenuLayout.ROW_H,
+                    Component.translatable(editingHighlight
+                            ? "createaddonorganizer.colors.target.banner"
+                            : "createaddonorganizer.colors.target.highlight"),
+                    b -> {
+                        target = editingHighlight ? EditTarget.BANNER : EditTarget.HIGHLIGHT;
                         editingStop2 = false;
                         rebuildWidgets();
-                    })
-                    .bounds(this.width - 106, 6, 100, 20).build());
+                    }));
         }
-
-        addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.ok"), b -> confirm())
-                .bounds(this.width / 2 - 102, buttonsY, 100, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.cancel"), b -> onClose())
-                .bounds(this.width / 2 + 2, buttonsY, 100, 20).build());
+        addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot++), doneY,
+                each, MenuLayout.ROW_H,
+                Component.translatable("createaddonorganizer.colors.cancel"), b -> onClose()));
+        addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot), doneY,
+                each, MenuLayout.ROW_H,
+                Component.translatable("createaddonorganizer.colors.ok"), b -> confirm())
+                .style(GlassButton.Style.ACCENT));
     }
 
     private void initHighlightPanel() {
-        int x = this.width / 2 - 100;
-        addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.highlight.enabled"), this.font)
-                .pos(x, panelTop)
-                .selected(hasHighlight)
-                .onValueChange((cb, checked) -> {
+        int x = columnX();
+        addRenderableWidget(new GlassToggle(x, panelTop,
+                Component.translatable("createaddonorganizer.colors.highlight.enabled"), hasHighlight,
+                checked -> {
                     hasHighlight = checked;
                     rebuildWidgets();
-                })
-                .build());
+                }));
         if (hasHighlight) {
             addColorControls(x, panelTop + 30, highlightHsva);
         }
+    }
+
+    private void computeRegions() {
+        contentW = embedded ? Math.max(120, embedW - EMBED_PAD * 2) : MenuLayout.panelWidth(this.width);
+        contentX = embedded ? embedX + EMBED_PAD : MenuLayout.panelX(this.width);
+        controlW = Math.max(120, Math.min(PICKER_MAX_W, contentW - PICKER_INSET * 2));
+        galleryColumns = BannerGrid.columnsFor(contentW);
+    }
+
+    private int columnX() {
+        return contentX + Math.max(0, (contentW - controlW) / 2);
+    }
+
+    private int previewX() {
+        return contentX + Math.max(0, (contentW - BannerTextures.WIDTH) / 2);
+    }
+
+    private int listRegionW() {
+        return contentW;
     }
 
     private void computeLayoutScale(int available) {
@@ -269,102 +355,124 @@ public class ColorPickerScreen extends Screen {
         barHeight = Math.max(8, Math.round(FULL_BAR_H * scale));
     }
 
-    private int initTopRow(int x, int y, Component toggleLabel, Runnable onToggle, Runnable onToggleBackward, Runnable onReset) {
-        final int rowW = 200, toggleW = 150, resetW = 46, gap = 4;
+    private record GradientSwitch(boolean enabled, Runnable toggle) {}
+
+    private int initTopRow(int y, Component toggleLabel, Runnable onToggle, Runnable onToggleBackward,
+            GradientSwitch gradient, Runnable onReset) {
+        int parts = 1 + (toggleLabel != null ? 1 : 0) + (gradient != null ? 1 : 0);
+        int each = MenuLayout.split(contentW, parts);
+        int slot = 0;
         if (toggleLabel != null) {
-            addRenderableWidget(new CycleActionButton(x, y, toggleW, ROW_H, toggleLabel, onToggle, onToggleBackward));
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetShort"),
-                            b -> onReset.run())
-                    .bounds(x + toggleW + gap, y, resetW, ROW_H)
-                    .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.reset")))
-                    .build());
-        } else {
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.reset"),
-                            b -> onReset.run())
-                    .bounds(x, y, rowW, ROW_H).build());
+            addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot++), y,
+                    each, ROW_H, toggleLabel, onToggle, onToggleBackward));
         }
-        return y + ROW_H + rowGap;
+        if (gradient != null) {
+            addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot++), y,
+                    each, ROW_H, gradientToggleLabel(gradient.enabled()),
+                    () -> { gradient.toggle().run(); rebuildWidgets(); },
+                    () -> { gradient.toggle().run(); rebuildWidgets(); }));
+        }
+        GlassButton reset = new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot), y, each, ROW_H,
+                Component.translatable(parts == 1
+                        ? "createaddonorganizer.colors.reset"
+                        : "createaddonorganizer.colors.resetShort"), b -> onReset.run());
+        if (parts > 1) {
+            reset.setTooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.reset")));
+        }
+        addRenderableWidget(reset);
+        return y + ROW_H + Math.max(rowGap, MenuLayout.GAP + CONTRAST_PAD);
     }
 
     private void initBannerPanel() {
-        int x = this.width / 2 - 100;
-        int contentY = initTopRow(x, panelTop, modeLabel(mode), this::toggleBannerMode, this::toggleBannerMode, this::resetBanner);
-
         if (mode == Mode.COLOR) {
-            addGradientControls(x, contentY, bannerGradientEnabled, () -> bannerGradientEnabled = !bannerGradientEnabled,
-                    bannerHsva, bannerHsva2,
+            int x = columnX();
+            int contentY = initTopRow(panelTop, modeLabel(mode), this::toggleBannerMode, this::toggleBannerMode,
+                    new GradientSwitch(bannerGradientEnabled, () -> bannerGradientEnabled = !bannerGradientEnabled),
+                    this::resetBanner);
+            addGradientControls(x, contentY, bannerGradientEnabled, bannerHsva, bannerHsva2,
                     new BannerGradientExtras(bannerDirection, d -> bannerDirection = d, bannerStyle, s -> bannerStyle = s));
         } else {
             boolean isUpload = selectedRef != null && selectedRef.startsWith("file:");
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.banner.upload"),
-                    b -> upload()).bounds(x, contentY, isUpload ? 130 : 200, 20).build());
+            int parts = isUpload ? 4 : 3;
+            int each = MenuLayout.split(contentW, parts);
+            int slot = 0;
+            addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot++), panelTop,
+                    each, ROW_H, modeLabel(mode), this::toggleBannerMode, this::toggleBannerMode));
+            addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot++), panelTop,
+                    each, ROW_H, Component.translatable("createaddonorganizer.banner.upload"), b -> upload()));
             if (isUpload) {
-                addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.banner.delete"),
-                        b -> confirmDelete()).bounds(x + 134, contentY, 66, 20).build());
+                addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot++), panelTop,
+                        each, ROW_H, Component.translatable("createaddonorganizer.banner.delete"),
+                        b -> confirmDelete()).style(GlassButton.Style.DANGER));
             }
+            GlassButton resetBannerButton = new GlassButton(
+                    MenuLayout.splitX(contentX, contentW, parts, slot), panelTop, each, ROW_H,
+                    Component.translatable("createaddonorganizer.colors.resetShort"), b -> resetBanner());
+            resetBannerButton.setTooltip(Tooltip.create(
+                    Component.translatable("createaddonorganizer.colors.reset")));
+            addRenderableWidget(resetBannerButton);
 
             boolean canAnimate = selectedTexture != null && BannerAnimation.isAnimatable(selectedTexture);
+            List<String> pool = BannerEditor.poolFor(id);
+            boolean hasPool = !pool.isEmpty();
+            int optionsY = panelTop + ROW_H + MenuLayout.GAP;
+            int optionX = contentX;
+
             if (canAnimate) {
-                addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.banner.animated"), this.font)
-                        .pos(x, contentY + 25)
-                        .selected(bannerAnimated)
-                        .onValueChange((cb, checked) -> {
+                GlassToggle animated = new GlassToggle(optionX, optionsY,
+                        Component.translatable("createaddonorganizer.banner.animated"), bannerAnimated,
+                        checked -> {
                             bannerAnimated = checked;
                             rebuildWidgets();
-                        })
-                        .build());
+                        });
+                addRenderableWidget(animated);
+                optionX += animated.getWidth() + MenuLayout.GAP * 2;
                 if (bannerAnimated) {
-                    addRenderableWidget(new ChannelSlider(x + 90, contentY + 24, 110, 20,
+                    addRenderableWidget(new ChannelSlider(optionX, optionsY, 96, ROW_H,
                             Component.translatable("createaddonorganizer.banner.speed"),
                             (bannerFrameTicks - 1) / 9.0,
                             v -> bannerFrameTicks = 1 + (int) Math.round(v * 9),
                             v -> (1 + (int) Math.round(v * 9)) + "t"));
+                    optionX += 96 + MenuLayout.GAP * 2;
                 }
             }
-
-            List<String> pool = BannerPools.poolFor(id);
-            boolean hasPool = !pool.isEmpty();
-            int checkboxY = canAnimate ? contentY + 48 : contentY + 24;
-            int listTop;
             if (hasPool) {
-                addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.banner.showAll"), this.font)
-                        .pos(x, checkboxY)
-                        .selected(Config.showAllBanners())
-                        .onValueChange((cb, checked) -> {
+                GlassToggle showAll = new GlassToggle(optionX, optionsY,
+                        Component.translatable("createaddonorganizer.banner.showAll"), Config.showAllBanners(),
+                        checked -> {
                             Config.setShowAllBanners(checked);
                             rebuildWidgets();
-                        })
-                        .build());
-                listTop = checkboxY + 24;
-            } else {
-                listTop = checkboxY;
+                        });
+                if (showAll.getX() + showAll.getWidth() > contentX + contentW) {
+                    showAll.setX(contentX + contentW - showAll.getWidth());
+                }
+                addRenderableWidget(showAll);
             }
 
-            int listBottom = Config.bannerEditorPreviewTop() ? this.height - 34 : previewY - 8;
+            int listTop = canAnimate || hasPool ? optionsY + ROW_H + MenuLayout.GAP : optionsY;
+            int listBottom = Config.bannerEditorPreviewTop()
+                    ? areaBottom() - MenuLayout.ROW_H - 4 - MenuLayout.GAP
+                    : previewY - 8;
             double restoreScroll = galleryList != null ? galleryList.getScrollAmount() : 0;
-            galleryList = new GalleryList(this.minecraft, this.width, listBottom - listTop, listTop, BannerTextures.HEIGHT + 6);
-            boolean restrict = !DevMode.isUnlocked() && !Config.showAllBanners();
-            List<String> refs;
-            if (!hasPool) {
-                refs = BannerTextures.gallery();
-            } else if (restrict) {
-                refs = new ArrayList<>(pool);
-                for (String extra : Config.extraPoolFor(id)) {
-                    if (!refs.contains(extra)) {
-                        refs.add(extra);
-                    }
-                }
+            galleryList = new GalleryList(this.minecraft, listRegionW(), listBottom - listTop, listTop,
+                    BannerTextures.HEIGHT + 6);
+            galleryList.setX(contentX);
+            boolean restrict = hasPool && !DevMode.isUnlocked() && !Config.showAllBanners();
+            Collection<String> refs;
+            if (restrict) {
+                LinkedHashSet<String> merged = new LinkedHashSet<>(pool);
+                merged.addAll(Config.extraPoolFor(id));
+                refs = merged;
             } else {
                 refs = BannerTextures.gallery();
             }
-            // A curated pool (unlike the full gallery, which only ever lists remote banners already
-            // confirmed downloaded) can reference a remote banner whose background sync hasn't finished
-            // yet; showing it anyway renders as a blank, invisible row instead of just being absent.
+            List<String> drawable = new ArrayList<>();
             for (String ref : refs) {
                 if (BannerTextures.resolve(ref) != null) {
-                    galleryList.add(ref);
+                    drawable.add(ref);
                 }
             }
+            galleryList.setRefs(drawable);
             addRenderableWidget(galleryList);
             galleryList.setScrollAmount(restoreScroll);
         }
@@ -381,101 +489,113 @@ public class ColorPickerScreen extends Screen {
     }
 
     private void initBoxPanel() {
-        int x = this.width / 2 - 100;
-        int contentY = initTopRow(x, panelTop, modeLabel(boxMode), this::toggleBoxMode, this::toggleBoxMode, this::resetBox);
-
-        if (boxMode == Mode.COLOR) {
-            int y = addColorControls(x, contentY, boxHsva);
-            addTintedBoxCheckbox(x, y + 4);
-            addRenderableWidget(new ChannelSlider(x + 90, y + 3, 110, 20, Component.translatable("createaddonorganizer.colors.alpha"),
-                    boxHsva.a, v -> boxHsva.a = (float) v));
-        } else {
-            int boxRowY = contentY + 8;
-            addTintedBoxCheckbox(x, boxRowY + 4);
-            int sliderGap = 6;
-            int checkboxW = 50;
-            int sliderW = (200 - checkboxW - sliderGap) / 2;
-            addRenderableWidget(new ChannelSlider(x + checkboxW, boxRowY + 3, sliderW, ROW_H,
-                    Component.translatable("createaddonorganizer.colors.boxDarken"),
-                    boxDarken, v -> boxDarken = (float) v));
-            addRenderableWidget(new ChannelSlider(x + checkboxW + sliderW + sliderGap, boxRowY + 3, sliderW, ROW_H,
-                    Component.translatable("createaddonorganizer.colors.boxOpacity"),
-                    boxOpacity, v -> boxOpacity = (float) v));
-            int rowY = boxRowY + ROW_H + 12;
-
-            boolean isUpload = selectedBoxRef != null && selectedBoxRef.startsWith("file:");
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.banner.upload"),
-                    b -> uploadBox()).bounds(x, rowY, isUpload ? 150 : 200, 20).build());
-            if (isUpload) {
-                addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.banner.delete"),
-                        b -> confirmDeleteBox()).bounds(x + 154, rowY, 46, 20).build());
-            }
-
-            int listTop = rowY + 29;
-            int listBottom = Config.bannerEditorPreviewTop() ? this.height - 34 : previewY - 8;
-            double restoreScroll = boxGalleryList != null ? boxGalleryList.getScrollAmount() : 0;
-            boxGalleryList = new BoxGalleryList(this.minecraft, this.width, listBottom - listTop, listTop, BoxTextures.HEIGHT + 10);
-            for (String ref : BoxTextures.gallery()) {
-                boxGalleryList.add(ref);
-            }
-            addRenderableWidget(boxGalleryList);
-            boxGalleryList.setScrollAmount(restoreScroll);
+        if (boxMode != Mode.COLOR) {
+            initBoxImagePanel();
+            return;
         }
+        int x = columnX();
+        int contentY = initTopRow(panelTop, modeLabel(boxMode), this::toggleBoxMode, this::toggleBoxMode, null,
+                this::resetBox);
+
+        int y = addColorControls(x, contentY, boxHsva);
+        addTintedBoxCheckbox(x, y + 4);
+        addRenderableWidget(new ChannelSlider(x + 96, y + 3, controlW - 96, 20,
+                Component.translatable("createaddonorganizer.colors.alpha"),
+                boxHsva.a, v -> boxHsva.a = (float) v));
+    }
+
+    private void initBoxImagePanel() {
+        boolean isUpload = selectedBoxRef != null && selectedBoxRef.startsWith("file:");
+        int parts = isUpload ? 4 : 3;
+        int each = MenuLayout.split(contentW, parts);
+        int slot = 0;
+        addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot++), panelTop,
+                each, ROW_H, modeLabel(boxMode), this::toggleBoxMode, this::toggleBoxMode));
+        addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot++), panelTop,
+                each, ROW_H, Component.translatable("createaddonorganizer.banner.upload"), b -> uploadBox()));
+        if (isUpload) {
+            addRenderableWidget(new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot++), panelTop,
+                    each, ROW_H, Component.translatable("createaddonorganizer.banner.delete"),
+                    b -> confirmDeleteBox()).style(GlassButton.Style.DANGER));
+        }
+        GlassButton resetBoxButton = new GlassButton(MenuLayout.splitX(contentX, contentW, parts, slot), panelTop,
+                each, ROW_H, Component.translatable("createaddonorganizer.colors.resetShort"), b -> resetBox());
+        resetBoxButton.setTooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.reset")));
+        addRenderableWidget(resetBoxButton);
+
+        int optionsY = panelTop + ROW_H + MenuLayout.GAP;
+        addTintedBoxCheckbox(contentX, optionsY + 1);
+        int checkboxW = 54;
+        int sliderW = (contentW - checkboxW - MenuLayout.GAP) / 2;
+        addRenderableWidget(new ChannelSlider(contentX + checkboxW, optionsY, sliderW, ROW_H,
+                Component.translatable("createaddonorganizer.colors.boxDarken"),
+                boxDarken, v -> boxDarken = (float) v));
+        addRenderableWidget(new ChannelSlider(contentX + contentW - sliderW, optionsY, sliderW, ROW_H,
+                Component.translatable("createaddonorganizer.colors.boxOpacity"),
+                boxOpacity, v -> boxOpacity = (float) v));
+
+        int listTop = optionsY + ROW_H + MenuLayout.GAP;
+        int listBottom = Config.bannerEditorPreviewTop()
+                ? areaBottom() - MenuLayout.ROW_H - 4 - MenuLayout.GAP
+                : previewY - 8;
+        double restoreScroll = boxGalleryList != null ? boxGalleryList.getScrollAmount() : 0;
+        boxGalleryList = new BoxGalleryList(this.minecraft, listRegionW(), listBottom - listTop, listTop,
+                BoxTextures.HEIGHT + 10);
+        boxGalleryList.setX(contentX);
+        boxGalleryList.setRefs(BoxTextures.gallery());
+        addRenderableWidget(boxGalleryList);
+        boxGalleryList.setScrollAmount(restoreScroll);
     }
 
     private void addTintedBoxCheckbox(int x, int y) {
-        addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.tintedBox"), this.font)
-                .pos(x, y)
-                .selected(Config.tintedTextBox())
-                .onValueChange((cb, checked) -> Config.setTintedTextBox(checked))
-                .build());
+        addRenderableWidget(new GlassToggle(x, y,
+                Component.translatable("createaddonorganizer.colors.tintedBox"), Config.tintedTextBoxFor(id),
+                checked -> Config.setTintedTextBoxFor(id, checked)));
     }
 
     private void initTextPanel() {
-        int x = this.width / 2 - 100;
-        int contentY = initTopRow(x, panelTop, textTargetLabel(), this::cycleTextTarget, this::cycleTextTargetBackward, this::resetActiveTextTarget);
+        int x = columnX();
+        GradientSwitch gradient = switch (textEditTarget) {
+            case PRIMARY -> new GradientSwitch(textGradientEnabled, () -> textGradientEnabled = !textGradientEnabled);
+            case SECONDARY -> new GradientSwitch(text2GradientEnabled, () -> text2GradientEnabled = !text2GradientEnabled);
+            case OUTLINE -> new GradientSwitch(outlineGradientEnabled, () -> outlineGradientEnabled = !outlineGradientEnabled);
+            case SHADOW -> null;
+        };
+        int contentY = initTopRow(panelTop, textTargetLabel(), this::cycleTextTarget, this::cycleTextTargetBackward,
+                gradient, this::resetActiveTextTarget);
 
         switch (textEditTarget) {
             case PRIMARY -> {
-                int y = addGradientControls(x, contentY, textGradientEnabled, () -> textGradientEnabled = !textGradientEnabled,
-                        textHsva, textHsva2, null);
-                addRenderableWidget(new ChannelSlider(x, y + 4, 200, 20, Component.translatable("createaddonorganizer.colors.scrollCutoff"),
+                int y = addGradientControls(x, contentY, textGradientEnabled, textHsva, textHsva2, null);
+                addRenderableWidget(new ChannelSlider(x, y + 4, controlW, 20,
+                        Component.translatable("createaddonorganizer.colors.scrollCutoff"),
                         scrollCutoff, v -> scrollCutoff = (float) v));
             }
             case SECONDARY -> {
-                int y = addGradientControls(x, contentY, text2GradientEnabled, () -> text2GradientEnabled = !text2GradientEnabled,
-                        text2Hsva, text2Hsva2, null);
-                addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.twoTone"), this.font)
-                        .pos(x, y + 4)
-                        .selected(twoTone)
-                        .onValueChange((cb, checked) -> twoTone = checked)
-                        .build());
-                addRenderableWidget(new ChannelSlider(x + 90, y + 3, 110, 20, Component.translatable("createaddonorganizer.colors.twoToneSplit"),
+                int y = addGradientControls(x, contentY, text2GradientEnabled, text2Hsva, text2Hsva2, null);
+                addRenderableWidget(new GlassToggle(x, y + 4,
+                        Component.translatable("createaddonorganizer.colors.twoTone"), twoTone,
+                        checked -> twoTone = checked));
+                addRenderableWidget(new ChannelSlider(x + 96, y + 3, controlW - 96, 20,
+                        Component.translatable("createaddonorganizer.colors.twoToneSplit"),
                         twoToneSplit, v -> twoToneSplit = (float) v));
             }
             case OUTLINE -> {
-                int y = addGradientControls(x, contentY, outlineGradientEnabled, () -> outlineGradientEnabled = !outlineGradientEnabled,
-                        outlineHsva, outlineHsva2, null);
-                addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.outline"), this.font)
-                        .pos(x, y + 4)
-                        .selected(outlineEnabled)
-                        .onValueChange((cb, checked) -> outlineEnabled = checked)
-                        .build());
+                int y = addGradientControls(x, contentY, outlineGradientEnabled, outlineHsva, outlineHsva2, null);
+                addRenderableWidget(new GlassToggle(x, y + 4,
+                        Component.translatable("createaddonorganizer.colors.outline"), outlineEnabled,
+                        checked -> outlineEnabled = checked));
             }
             case SHADOW -> {
-                addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.shadow"), this.font)
-                        .pos(x, contentY)
-                        .selected(shadowEnabled)
-                        .onValueChange((cb, checked) -> shadowEnabled = checked)
-                        .build());
-                addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.shadowUnlinked"), this.font)
-                        .pos(x, contentY + 24)
-                        .selected(shadowUnlinked)
-                        .onValueChange((cb, checked) -> {
+                addRenderableWidget(new GlassToggle(x, contentY,
+                        Component.translatable("createaddonorganizer.colors.shadow"), shadowEnabled,
+                        checked -> shadowEnabled = checked));
+                addRenderableWidget(new GlassToggle(x, contentY + 24,
+                        Component.translatable("createaddonorganizer.colors.shadowUnlinked"), shadowUnlinked,
+                        checked -> {
                             shadowUnlinked = checked;
                             rebuildWidgets();
-                        })
-                        .build());
+                        }));
                 if (shadowUnlinked) {
                     addColorControls(x, contentY + 50, shadowHsva);
                 }
@@ -551,35 +671,32 @@ public class ColorPickerScreen extends Screen {
     private record BannerGradientExtras(ColorSpec.Direction direction, Consumer<ColorSpec.Direction> setDirection,
             ColorSpec.Style style, Consumer<ColorSpec.Style> setStyle) {}
 
-    private int addGradientControls(int x, int y, boolean gradientEnabled, Runnable toggleGradient,
+    private int addGradientControls(int x, int y, boolean gradientEnabled,
             Hsva stop1, Hsva stop2, BannerGradientExtras extras) {
         if (!gradientEnabled) {
-            addRenderableWidget(new CycleActionButton(x, y, 200, ROW_H, gradientToggleLabel(false),
-                    () -> { toggleGradient.run(); rebuildWidgets(); },
-                    () -> { toggleGradient.run(); rebuildWidgets(); }));
-            y += ROW_H + rowGap;
             return addColorControls(x, y, stop1);
         }
 
-        addRenderableWidget(new CycleActionButton(x, y, 96, ROW_H, gradientToggleLabel(true),
-                () -> { toggleGradient.run(); rebuildWidgets(); },
-                () -> { toggleGradient.run(); rebuildWidgets(); }));
-        addRenderableWidget(new CycleActionButton(x + 104, y, 96, ROW_H, stopLabel(),
+        int parts = extras != null ? 3 : 1;
+        int each = MenuLayout.split(contentW, parts);
+        int slot = 0;
+        addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot++), y,
+                each, ROW_H, stopLabel(),
                 () -> { editingStop2 = !editingStop2; rebuildWidgets(); },
                 () -> { editingStop2 = !editingStop2; rebuildWidgets(); }));
-        y += ROW_H + rowGap;
-
         if (extras != null) {
             ColorSpec.Direction direction = extras.direction();
-            addRenderableWidget(new CycleActionButton(x, y, 96, ROW_H, directionLabel(direction),
+            addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot++), y,
+                    each, ROW_H, directionLabel(direction),
                     () -> { extras.setDirection().accept(nextDirection(direction)); rebuildWidgets(); },
                     () -> { extras.setDirection().accept(prevDirection(direction)); rebuildWidgets(); }));
             ColorSpec.Style style = extras.style();
-            addRenderableWidget(new CycleActionButton(x + 104, y, 96, ROW_H, styleLabel(style),
+            addRenderableWidget(new CycleActionButton(MenuLayout.splitX(contentX, contentW, parts, slot), y,
+                    each, ROW_H, styleLabel(style),
                     () -> { extras.setStyle().accept(nextStyle(style)); rebuildWidgets(); },
                     () -> { extras.setStyle().accept(prevStyle(style)); rebuildWidgets(); }));
-            y += ROW_H + rowGap;
         }
+        y += ROW_H + rowGap;
 
         return addColorControls(x, y, editingStop2 ? stop2 : stop1);
     }
@@ -654,10 +771,12 @@ public class ColorPickerScreen extends Screen {
     }
 
     private int addColorControls(int x, int y, Hsva target) {
-        int width = 200;
+        int width = controlW;
 
         int barY = y + squareHeight + rowGap;
         int hexY = barY + barHeight + rowGap;
+        contrastY = y;
+        contrastH = hexY + 20 - y;
 
         EditBox hexBox = new EditBox(this.font, x, hexY, width - 50, 20, Component.empty());
         hexBox.setMaxLength(7);
@@ -679,9 +798,9 @@ public class ColorPickerScreen extends Screen {
         addRenderableWidget(new SvSquare(x, y, width, squareHeight, target, refreshHexText, cellSize, svSquareTexture));
         addRenderableWidget(new HueBar(x, barY, width, barHeight, target, refreshHexText, cellSize, hueBarTexture));
         addRenderableWidget(hexBox);
-        addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.copy"),
-                        b -> this.minecraft.keyboardHandler.setClipboard(hexBox.getValue()))
-                .bounds(x + width - 44, hexY, 44, 20).build());
+        addRenderableWidget(new GlassButton(x + width - 44, hexY, 44, 20,
+                Component.translatable("createaddonorganizer.colors.copy"),
+                b -> this.minecraft.keyboardHandler.setClipboard(hexBox.getValue())));
 
         return hexY + 20;
     }
@@ -739,6 +858,7 @@ public class ColorPickerScreen extends Screen {
         selectedBoxTexture = null;
         boxDarken = Config.DEFAULT_BOX_DARKEN.get().floatValue();
         boxOpacity = Config.DEFAULT_BOX_OPACITY.get().floatValue();
+        Config.clearTintedTextBoxFor(id);
         rebuildWidgets();
     }
 
@@ -936,7 +1056,7 @@ public class ColorPickerScreen extends Screen {
     }
 
     private EditTarget hitTest(int mx, int my) {
-        int bx = this.width / 2 - BannerTextures.WIDTH / 2;
+        int bx = previewX();
         int by = previewY;
         boolean hasBanner = mode == Mode.COLOR || selectedTexture != null;
         if (hasBanner) {
@@ -972,7 +1092,9 @@ public class ColorPickerScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         hoverBannerTooltip = null;
         super.render(g, mouseX, mouseY, partialTick);
-        g.drawCenteredString(this.font, currentTitle(), this.width / 2, 16, 0xFFFFFFFF);
+        Component titleLine = currentTitle();
+        g.drawString(this.font, titleLine, areaCenterX() - this.font.width(titleLine) / 2,
+                areaTop() + MenuLayout.TITLE_Y, GlassSkin.titleTextColor(), GlassSkin.shadow());
 
         if (hoverBannerTooltip != null) {
             g.renderTooltip(this.font, hoverBannerTooltip, mouseX, mouseY);
@@ -982,7 +1104,7 @@ public class ColorPickerScreen extends Screen {
             return;
         }
 
-        int bx = this.width / 2 - BannerTextures.WIDTH / 2;
+        int bx = previewX();
         int by = previewY;
         g.fill(bx - 2, by - 2, bx + BannerTextures.WIDTH + 2, by + CaoSection.CONTENT_H + 2, 0xD0202020);
 
@@ -1024,6 +1146,17 @@ public class ColorPickerScreen extends Screen {
         return (a << 24) | 0x00FFFFFF;
     }
 
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (!embedded) {
+            super.renderBackground(g, mouseX, mouseY, partialTick);
+        }
+        if (contrastH <= 0) {
+            return;
+        }
+        GlassSkin.panel(g, contentX, contrastY - CONTRAST_PAD, contentW, contrastH + CONTRAST_PAD * 2);
+    }
+
     private static void outline(GuiGraphics g, int x1, int y1, int x2, int y2) {
         outline(g, x1, y1, x2, y2, 0xFFFFFFFF);
     }
@@ -1044,7 +1177,11 @@ public class ColorPickerScreen extends Screen {
     public void onClose() {
         svSquareTexture.release();
         hueBarTexture.release();
-        this.minecraft.setScreen(parent);
+        if (embedded) {
+            onEmbeddedDone.run();
+            return;
+        }
+        ScreenSwoosh.surface(() -> parent, Config.SWOOSH_BACK);
     }
 
     private boolean hasBanner() {
@@ -1307,24 +1444,56 @@ public class ColorPickerScreen extends Screen {
     }
 
     private class GalleryList extends ContainerObjectSelectionList<GalleryList.Row> {
+        private final ListGlide glide = new ListGlide();
+
         GalleryList(Minecraft mc, int width, int height, int top, int itemHeight) {
             super(mc, width, height, top, itemHeight);
         }
 
-        void add(String ref) {
-            addEntry(new Row(ref));
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            glide.endScroll(this);
+            return handled;
+        }
+
+        @Override
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            glide.endScroll(this);
+            return handled;
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            glide.beforeRender(this);
+            super.renderWidget(g, mouseX, mouseY, partialTick);
+        }
+
+        void setRefs(List<String> refs) {
+            clearEntries();
+            for (List<String> group : BannerGrid.chunk(refs, galleryColumns)) {
+                addEntry(new Row(group));
+            }
         }
 
         @Override
         public int getRowWidth() {
-            return BannerTextures.WIDTH + 12;
+            return BannerGrid.rowWidth(galleryColumns);
+        }
+
+        @Override
+        protected int getScrollbarPosition() {
+            return this.getX() + this.getWidth() - 6;
         }
 
         private class Row extends ContainerObjectSelectionList.Entry<Row> {
-            private final String ref;
+            private final List<String> refs;
 
-            Row(String ref) {
-                this.ref = ref;
+            Row(List<String> refs) {
+                this.refs = refs;
             }
 
             @Override
@@ -1339,63 +1508,105 @@ public class ColorPickerScreen extends Screen {
 
             @Override
             public boolean mouseClicked(double mx, double my, int button) {
-                ResourceLocation texture = BannerTextures.resolve(ref);
-                if (button == 0 && texture != null) {
-                    selectedTexture = texture;
-                    selectedRef = ref;
-                    syncAnimationFields();
-                    rebuildWidgets();
-                    return true;
+                if (button != 0) {
+                    return false;
                 }
-                return false;
+                int cell = BannerGrid.cellAt(mx, GalleryList.this.getRowLeft(), getRowWidth(), galleryColumns);
+                if (cell < 0 || cell >= refs.size()) {
+                    return false;
+                }
+                String ref = refs.get(cell);
+                ResourceLocation texture = BannerTextures.resolve(ref);
+                if (texture == null) {
+                    return false;
+                }
+                selectedTexture = texture;
+                selectedRef = ref;
+                syncAnimationFields();
+                rebuildWidgets();
+                return true;
             }
 
             @Override
             public void render(GuiGraphics g, int index, int top, int left, int rowWidth, int rowHeight,
                     int mouseX, int mouseY, boolean hovered, float partialTick) {
-                int bx = left + (rowWidth - BannerTextures.WIDTH) / 2;
                 int by = top + (rowHeight - BannerTextures.HEIGHT) / 2;
-                boolean selected = ref.equals(selectedRef);
-                if (selected) {
-                    outline(g, bx - 1, by - 1, bx + BannerTextures.WIDTH + 1, by + BannerTextures.HEIGHT + 1, 0xFFFFFFFF);
-                } else if (hovered) {
-                    outline(g, bx - 1, by - 1, bx + BannerTextures.WIDTH + 1, by + BannerTextures.HEIGHT + 1, 0x80FFFFFF);
-                }
-                ResourceLocation texture = BannerTextures.resolve(ref);
-                boolean bannerHovered = BannerAnimation.isHovering(bx, by, BannerTextures.WIDTH, BannerTextures.HEIGHT, mouseX, mouseY);
-                if (texture != null) {
-                    Optional<BannerAnimation.AnimInfo> anim = BannerAnimation.get(texture);
-                    int frameCount = anim.map(BannerAnimation.AnimInfo::frameCount).orElse(1);
-                    int frame = anim.map(info -> BannerAnimation.currentFrame(texture, info, bannerHovered)).orElse(0);
-                    g.blit(texture, bx, by, 0.0F, frame * BannerTextures.HEIGHT, BannerTextures.WIDTH, BannerTextures.HEIGHT,
-                            BannerTextures.WIDTH, frameCount * BannerTextures.HEIGHT);
-                }
-                if (bannerHovered) {
-                    ColorPickerScreen.this.hoverBannerTooltip = Component.literal(displayFilename(ref));
+                for (int i = 0; i < refs.size(); i++) {
+                    String ref = refs.get(i);
+                    int bx = BannerGrid.cellX(left, rowWidth, galleryColumns, i);
+                    boolean bannerHovered = BannerAnimation.isHovering(bx, by, BannerTextures.WIDTH,
+                            BannerTextures.HEIGHT, mouseX, mouseY);
+                    if (ref.equals(selectedRef)) {
+                        outline(g, bx - 1, by - 1, bx + BannerTextures.WIDTH + 1, by + BannerTextures.HEIGHT + 1, 0xFFFFFFFF);
+                    } else if (bannerHovered) {
+                        outline(g, bx - 1, by - 1, bx + BannerTextures.WIDTH + 1, by + BannerTextures.HEIGHT + 1, 0x80FFFFFF);
+                    }
+                    ResourceLocation texture = BannerTextures.resolve(ref);
+                    if (texture != null) {
+                        int frame = BannerAnimation.get(texture)
+                                .map(info -> BannerAnimation.currentFrame(texture, info, bannerHovered)).orElse(0);
+                        g.blit(texture, bx, by, 0.0F, frame * BannerTextures.HEIGHT, BannerTextures.WIDTH,
+                                BannerTextures.HEIGHT, BannerTextures.WIDTH, BannerAnimation.sheetHeight(texture));
+                    }
+                    if (bannerHovered) {
+                        ColorPickerScreen.this.hoverBannerTooltip = Component.literal(displayFilename(ref));
+                    }
                 }
             }
         }
     }
 
     private class BoxGalleryList extends ContainerObjectSelectionList<BoxGalleryList.Row> {
+        private final ListGlide glide = new ListGlide();
+
         BoxGalleryList(Minecraft mc, int width, int height, int top, int itemHeight) {
             super(mc, width, height, top, itemHeight);
         }
 
-        void add(String ref) {
-            addEntry(new Row(ref));
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            glide.endScroll(this);
+            return handled;
+        }
+
+        @Override
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            glide.endScroll(this);
+            return handled;
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            glide.beforeRender(this);
+            super.renderWidget(g, mouseX, mouseY, partialTick);
+        }
+
+        void setRefs(List<String> refs) {
+            clearEntries();
+            for (List<String> group : BannerGrid.chunk(refs, galleryColumns)) {
+                addEntry(new Row(group));
+            }
         }
 
         @Override
         public int getRowWidth() {
-            return BannerTextures.WIDTH + 12;
+            return BannerGrid.rowWidth(galleryColumns);
+        }
+
+        @Override
+        protected int getScrollbarPosition() {
+            return this.getX() + this.getWidth() - 6;
         }
 
         private class Row extends ContainerObjectSelectionList.Entry<Row> {
-            private final String ref;
+            private final List<String> refs;
 
-            Row(String ref) {
-                this.ref = ref;
+            Row(List<String> refs) {
+                this.refs = refs;
             }
 
             @Override
@@ -1410,14 +1621,22 @@ public class ColorPickerScreen extends Screen {
 
             @Override
             public boolean mouseClicked(double mx, double my, int button) {
-                ResourceLocation texture = BoxTextures.resolve(ref);
-                if (button == 0 && texture != null) {
-                    selectedBoxTexture = texture;
-                    selectedBoxRef = ref;
-                    rebuildWidgets();
-                    return true;
+                if (button != 0) {
+                    return false;
                 }
-                return false;
+                int cell = BannerGrid.cellAt(mx, BoxGalleryList.this.getRowLeft(), getRowWidth(), galleryColumns);
+                if (cell < 0 || cell >= refs.size()) {
+                    return false;
+                }
+                String ref = refs.get(cell);
+                ResourceLocation texture = BoxTextures.resolve(ref);
+                if (texture == null) {
+                    return false;
+                }
+                selectedBoxTexture = texture;
+                selectedBoxRef = ref;
+                rebuildWidgets();
+                return true;
             }
 
             @Override
@@ -1425,20 +1644,26 @@ public class ColorPickerScreen extends Screen {
                     int mouseX, int mouseY, boolean hovered, float partialTick) {
                 int previewW = BannerTextures.WIDTH;
                 int previewH = BoxTextures.HEIGHT;
-                int bx = left + (rowWidth - previewW) / 2;
                 int by = top + (rowHeight - previewH) / 2;
-                boolean selected = ref.equals(selectedBoxRef);
-                if (selected) {
-                    outline(g, bx - 1, by - 1, bx + previewW + 1, by + previewH + 1, 0xFFFFFFFF);
-                } else if (hovered) {
-                    outline(g, bx - 1, by - 1, bx + previewW + 1, by + previewH + 1, 0x80FFFFFF);
-                }
-                ResourceLocation texture = BoxTextures.resolve(ref);
-                OptionalInt nativeW = texture != null ? BoxTextures.nativeWidth(texture) : OptionalInt.empty();
-                if (texture != null && nativeW.isPresent()) {
-                    BoxTextures.blit3Slice(g, texture, bx, by, previewW, previewH, nativeW.getAsInt(), BoxTextures.HEIGHT);
+                for (int i = 0; i < refs.size(); i++) {
+                    String ref = refs.get(i);
+                    int bx = BannerGrid.cellX(left, rowWidth, galleryColumns, i);
+                    boolean cellHovered = mouseX >= bx && mouseX < bx + previewW
+                            && mouseY >= by && mouseY < by + previewH;
+                    if (ref.equals(selectedBoxRef)) {
+                        outline(g, bx - 1, by - 1, bx + previewW + 1, by + previewH + 1, 0xFFFFFFFF);
+                    } else if (cellHovered) {
+                        outline(g, bx - 1, by - 1, bx + previewW + 1, by + previewH + 1, 0x80FFFFFF);
+                    }
+                    ResourceLocation texture = BoxTextures.resolve(ref);
+                    OptionalInt nativeW = texture != null ? BoxTextures.nativeWidth(texture) : OptionalInt.empty();
+                    if (texture != null && nativeW.isPresent()) {
+                        BoxTextures.blit3Slice(g, texture, bx, by, previewW, previewH, nativeW.getAsInt(),
+                                BoxTextures.HEIGHT);
+                    }
                 }
             }
         }
     }
 }
+

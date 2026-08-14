@@ -38,5 +38,15 @@ public interface IndexPanelSkin {
         return scroll;
     }
 
+    default boolean smoothScroll() {
+        return true;
+    }
+
+    default boolean drawsToggleItself() {
+        return false;
+    }
+
+    default void renderToggle(GuiGraphics gg, Rect rect, boolean expanded, boolean hovered) {}
+
     void render(CreativeModeInventoryScreen screen, GuiGraphics gg, View view, int mouseX, int mouseY);
 }

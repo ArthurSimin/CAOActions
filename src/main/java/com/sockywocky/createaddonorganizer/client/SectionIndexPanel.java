@@ -42,7 +42,7 @@ public final class SectionIndexPanel {
 
     private static boolean expanded = false;
 
-    private static float panelScroll = 0f;
+    private static final SmoothScroll panelScroll = new SmoothScroll();
     private static Config.IndexPanelStyle lastStyle = null;
 
     private static long animStart = -1;
@@ -63,19 +63,21 @@ public final class SectionIndexPanel {
         Config.IndexPanelStyle style = Config.indexPanelStyle();
         if (style != lastStyle) {
             lastStyle = style;
-            panelScroll = 0f;
+            panelScroll.jumpTo(0);
         }
         return switch (style) {
             case VANILLA -> ClassicPanelSkin.VANILLA;
             case DARK -> ClassicPanelSkin.DARK;
             case REFURBISHED -> RefurbishedPanelSkin.INSTANCE;
             case BACKPORT -> BackportPanelSkin.INSTANCE;
+            case UNIQUE_DARK -> FlatPanelSkin.UNIQUE_DARK;
+            case ADAPTIVE -> FlatPanelSkin.ADAPTIVE;
         };
     }
 
     private static IndexPanelSkin.View view(CreativeModeInventoryScreen screen, boolean withSelection) {
-        return new IndexPanelSkin.View(ids == null ? 0 : ids.size(), icons, expanded, panelScroll,
-                withSelection ? selectedIndex(screen) : -1);
+        return new IndexPanelSkin.View(ids == null ? 0 : ids.size(), icons, expanded,
+                (float) panelScroll.displayed(), withSelection ? selectedIndex(screen) : -1);
     }
 
     private static IndexPanelSkin.Rect toggleRect(CreativeModeInventoryScreen screen) {
@@ -96,17 +98,22 @@ public final class SectionIndexPanel {
         }
         tickAnimation(screen);
         IndexPanelSkin skin = skin();
-        panelScroll = Mth.clamp(panelScroll, 0f, skin.maxScroll(screen, ids.size()));
+        panelScroll.setTarget(Mth.clamp((float) panelScroll.target(), 0f, skin.maxScroll(screen, ids.size())));
+        panelScroll.advance();
 
         IndexPanelSkin.View view = view(screen, true);
         skin.render(screen, gg, view, mouseX, mouseY);
 
         boolean toggleHovered = toggleHitRect(screen).contains(mouseX, mouseY);
         IndexPanelSkin.Rect toggle = toggleRect(screen);
-        ResourceLocation toggleTexture = expanded ? TOGGLE_TEXTURE_EXPANDED : TOGGLE_TEXTURE_COLLAPSED;
-        gg.blit(toggleTexture, toggle.x(), toggle.y(), 0f, 0f, toggle.w(), toggle.h(), toggle.w(), toggle.h());
-        if (toggleHovered) {
-            gg.fill(toggle.x(), toggle.y(), toggle.x() + toggle.w(), toggle.y() + toggle.h(), TOGGLE_HOVER);
+        if (skin.drawsToggleItself()) {
+            skin.renderToggle(gg, toggle, expanded, toggleHovered);
+        } else {
+            ResourceLocation toggleTexture = expanded ? TOGGLE_TEXTURE_EXPANDED : TOGGLE_TEXTURE_COLLAPSED;
+            gg.blit(toggleTexture, toggle.x(), toggle.y(), 0f, 0f, toggle.w(), toggle.h(), toggle.w(), toggle.h());
+            if (toggleHovered) {
+                gg.fill(toggle.x(), toggle.y(), toggle.x() + toggle.w(), toggle.y() + toggle.h(), TOGGLE_HOVER);
+            }
         }
 
         var font = Minecraft.getInstance().font;
@@ -142,13 +149,13 @@ public final class SectionIndexPanel {
             }
             case IndexPanelSkin.Hit.ScrollUp ignored -> {
                 if (button == 0) {
-                    panelScroll = Mth.clamp(panelScroll - 1f, 0f, skin.maxScroll(screen, ids.size()));
+                    scrollTo(skin, (float) panelScroll.target() - 1f, skin.maxScroll(screen, ids.size()));
                     playClick();
                 }
             }
             case IndexPanelSkin.Hit.ScrollDown ignored -> {
                 if (button == 0) {
-                    panelScroll = Mth.clamp(panelScroll + 1f, 0f, skin.maxScroll(screen, ids.size()));
+                    scrollTo(skin, (float) panelScroll.target() + 1f, skin.maxScroll(screen, ids.size()));
                     playClick();
                 }
             }
@@ -182,8 +189,8 @@ public final class SectionIndexPanel {
         }
         IndexPanelSkin skin = skin();
         if (skin.wheelOver(screen, view(screen, false), mouseX, mouseY)) {
-            panelScroll = skin.snap(Mth.clamp(panelScroll - (float) (scrollY * skin.wheelStep()),
-                    0f, skin.maxScroll(screen, ids.size())));
+            scrollTo(skin, (float) panelScroll.target() - (float) (scrollY * skin.wheelStep()),
+                    skin.maxScroll(screen, ids.size()));
             return true;
         }
         cancelAnimation();
@@ -254,6 +261,15 @@ public final class SectionIndexPanel {
         }
     }
 
+    private static void scrollTo(IndexPanelSkin skin, float value, float max) {
+        float wanted = skin.snap(Mth.clamp(value, 0f, max));
+        if (skin.smoothScroll()) {
+            panelScroll.setTarget(wanted);
+        } else {
+            panelScroll.jumpTo(wanted);
+        }
+    }
+
     private static void cancelAnimation() {
         animStart = -1;
     }
@@ -298,7 +314,7 @@ public final class SectionIndexPanel {
             if (!Objects.equals(tabId, lastTabId)) {
                 lastTabId = tabId;
                 cancelAnimation();
-                panelScroll = 0f;
+                panelScroll.jumpTo(0);
             }
             ids = null;
             titles = List.of();
@@ -315,7 +331,7 @@ public final class SectionIndexPanel {
             lastTabId = tabId;
             if (tabChanged) {
                 cancelAnimation();
-                panelScroll = 0f;
+                panelScroll.jumpTo(0);
             }
             if (!sectionsChanged) {
                 return;
@@ -347,7 +363,7 @@ public final class SectionIndexPanel {
         lastSimVersion = version;
         if (tabChanged) {
             cancelAnimation();
-            panelScroll = 0f;
+            panelScroll.jumpTo(0);
         }
         List<SimulatedHub.IndexEntry> entries = SimulatedHub.allSectionsInOrder();
         List<ResourceLocation> newIds = new ArrayList<>(entries.size());

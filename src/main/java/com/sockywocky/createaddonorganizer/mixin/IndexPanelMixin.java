@@ -10,11 +10,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.mcexpanded.fancytabsections.Section.Section;
 import net.mcexpanded.fancytabsections.creativetab.IndexPanel;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.sounds.SoundEvents;
 
 @Mixin(value = IndexPanel.class, remap = false)
 public class IndexPanelMixin {

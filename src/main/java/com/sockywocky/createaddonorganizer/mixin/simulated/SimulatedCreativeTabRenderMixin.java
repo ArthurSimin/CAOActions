@@ -1,7 +1,5 @@
 package com.sockywocky.createaddonorganizer.mixin.simulated;
 
-import com.llamalad7.mixinextras.sugar.Local;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,6 +20,9 @@ import net.minecraft.resources.ResourceLocation;
 @Mixin(targets = "dev.simulated_team.simulated.registrate.simulated_tab.SimulatedCreativeTab", remap = false)
 public class SimulatedCreativeTabRenderMixin {
 
+    private static final int BANNER_INSET_X = 8;
+    private static final int BANNER_INSET_Y = 17;
+
     private static ResourceLocation createaddonorganizer$currentId;
     private static boolean createaddonorganizer$currentOwned;
     private static int createaddonorganizer$left;
@@ -31,17 +32,16 @@ public class SimulatedCreativeTabRenderMixin {
     private static void createaddonorganizer$verify(CreativeModeInventoryScreen screen, GuiGraphics graphics,
             int mouseX, int mouseY, CallbackInfo ci) {
         SimulatedHub.verifyInjected();
+        createaddonorganizer$left = screen.getGuiLeft() + BANNER_INSET_X;
+        createaddonorganizer$top = screen.getGuiTop() + BANNER_INSET_Y;
     }
 
     @Redirect(method = "renderBanners", at = @At(value = "INVOKE",
             target = "Ldev/simulated_team/simulated/api/SimpleResourceManager;getId(Ljava/lang/Object;)Lnet/minecraft/resources/ResourceLocation;"))
-    private static ResourceLocation createaddonorganizer$captureId(SimpleResourceManager manager, Object section,
-            @Local(ordinal = 0) int left, @Local(ordinal = 1) int top) {
+    private static ResourceLocation createaddonorganizer$captureId(SimpleResourceManager<Object> manager, Object section) {
         ResourceLocation id = manager.getId(section);
         createaddonorganizer$currentId = id;
         createaddonorganizer$currentOwned = SimulatedHub.owns(id);
-        createaddonorganizer$left = left;
-        createaddonorganizer$top = top;
         return id;
     }
 
@@ -75,3 +75,4 @@ public class SimulatedCreativeTabRenderMixin {
         SimulatedCreativeTab.drawAuraText(g, text, color1, color2, x, y);
     }
 }
+

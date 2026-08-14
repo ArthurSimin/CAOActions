@@ -1,0 +1,3198 @@
+[
+  {
+    "name": "Create",
+    "tabs": [
+      { "id": "create:base", "label": "Create" },
+      { "id": "create:palettes", "label": "Create: Palettes" }
+    ]
+  },
+  {
+    "name": "Bits 'n' Bobs",
+    "tabs": [
+      { "id": "bits_n_bobs:bnb_based", "label": "Bits 'n' Bobs" },
+      { "id": "bits_n_bobs:bnb_palettes", "label": "Bits 'n' Bobs' Block Palettes" },
+      { "id": "bits_n_bobs:bnb_deco", "label": "Bits 'n' Bobs' Block Palettes (0.0.44)" }
+    ]
+  },
+  {
+    "name": "Steam 'n' Rails",
+    "tabs": [
+      { "id": "railways:main", "label": "Steam 'n' Rails" },
+      { "id": "railways:tracks", "label": "Steam 'n' Rails: Tracks" },
+      { "id": "railways:palettes", "label": "Steam 'n' Rails: Palettes" }
+    ]
+  },
+  {
+    "name": "Create: More Automation",
+    "tabs": [
+      { "id": "create_more_automation:create_more_automation", "label": "Create: More Automation" }
+    ]
+  },
+  {
+    "name": "Cardboard Chalk Box",
+    "tabs": [
+      { "id": "cardboardchalkbox:cardboard_chalk_tab", "label": "Cardboard Chalk Box" }
+    ]
+  },
+  {
+    "name": "Create Mobile Packages",
+    "tabs": [
+      { "id": "create_mobile_packages:create_mobile_packages_tab", "label": "Create Mobile Packages" }
+    ]
+  },
+  {
+    "name": "Create Crafts & Additions",
+    "tabs": [
+      { "id": "createaddition:createaddition", "label": "Create Crafts & Additions" }
+    ]
+  },
+  {
+    "name": "Create: Copycats+",
+    "tabs": [
+      { "id": "copycats:functional", "label": "Create: Copycats+ | Functional" },
+      { "id": "copycats:main", "label": "Create: Copycats+ | Decorative" }
+    ]
+  },
+  {
+    "name": "Create Deco",
+    "tabs": [
+      { "id": "createdeco:bricks_tab", "label": "Create Deco Bricks" },
+      { "id": "createdeco:props_tab", "label": "Create Deco Props" }
+    ]
+  },
+  {
+    "name": "Create Big Cannons",
+    "tabs": [
+      { "id": "createbigcannons:base", "label": "Create Big Cannons" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics",
+    "tabs": [
+      { "id": "aeronautics:aeronautics", "label": "Create Simulated" }
+    ]
+  },
+  {
+    "name": "Create Offroad",
+    "tabs": [
+      { "id": "offroad:offroad", "label": "Create Simulated" }
+    ]
+  },
+  {
+    "name": "Create Simulated",
+    "tabs": [
+      { "id": "simulated:simulated", "label": "Create Simulated" }
+    ]
+  },
+  {
+    "name": "Create: Connected",
+    "tabs": [
+      { "id": "create_connected:main", "label": "Create: Connected" }
+    ]
+  },
+  {
+    "name": "Create Diesel Generators",
+    "tabs": [
+      { "id": "createdieselgenerators:cdg_creative_tab", "label": "Create: Diesel Generators" }
+    ]
+  },
+  {
+    "name": "Create: Enchantment Industry",
+    "tabs": [
+      { "id": "create_enchantment_industry:apotheotic", "label": "Create: Apotheotic Industry" },
+      { "id": "create_enchantment_industry:base", "label": "Create: Enchantment Industry" }
+    ]
+  },
+  {
+    "name": "Create: Bells & Whistles",
+    "tabs": [
+      { "id": "bellsandwhistles:bells_and_whistles_tab", "label": "Bells & Whistles" }
+    ]
+  },
+  {
+    "name": "Create: Interiors",
+    "tabs": [
+      { "id": "interiors:main", "label": "Create: Interiors" }
+    ]
+  },
+  {
+    "name": "Design n' Decor",
+    "tabs": [
+      { "id": "dndecor:base", "label": "Design n' Decor" }
+    ]
+  },
+  {
+    "name": "Create Ore Excavation",
+    "tabs": [
+      { "id": "createoreexcavation:create_ore_excavation", "label": "Create Ore Excavation" }
+    ]
+  },
+  {
+    "name": "Create: Dreams n' Desires",
+    "tabs": [
+      { "id": "dndesires:base_tab", "label": "Create: Dreams n' Desires" }
+    ]
+  },
+  {
+    "name": "Create Stuff 'N Additions",
+    "tabs": [
+      { "id": "create_sa:create_stuff_additions_tab", "label": "Create Stuff 'N Additions" }
+    ]
+  },
+  {
+    "name": "Create: Power Loader",
+    "tabs": [
+      { "id": "create_power_loader:main", "label": "Create: Power Loader" }
+    ]
+  },
+  {
+    "name": "Create: Dragons Plus",
+    "tabs": [
+      { "id": "create_dragons_plus:base", "label": "Create: Dragons Plus" }
+    ]
+  },
+  {
+    "name": "Create: Framed",
+    "tabs": [
+      { "id": "createframed:create_framed", "label": "Create: Framed" }
+    ]
+  },
+  {
+    "name": "Create Utilities",
+    "tabs": [
+      { "id": "createutilities:base", "label": "Create Utilities" }
+    ]
+  },
+  {
+    "name": "Create Encased",
+    "tabs": [
+      { "id": "createcasing:tab", "label": "Create Encased" }
+    ]
+  },
+  {
+    "name": "Create Railways Navigator",
+    "tabs": [
+      { "id": "createrailwaysnavigator:createrailwaysnavigator", "label": "Create Railways Navigator" }
+    ]
+  },
+  {
+    "name": "Extended Cogwheels",
+    "tabs": [
+      { "id": "extendedgears:main", "label": "Extended Cogwheels" }
+    ]
+  },
+  {
+    "name": "create: things and misc",
+    "tabs": [
+      { "id": "create_things_and_misc:tab", "label": "Create: Things and Misc" }
+    ]
+  },
+  {
+    "name": "Create: The Factory Must Grow",
+    "tabs": [
+      { "id": "tfmg:aluminum", "label": "Create: The Factory Must Grow: Aluminum" },
+      { "id": "tfmg:constantan", "label": "Create: The Factory Must Grow: Constantan" },
+      { "id": "tfmg:copper", "label": "Create: The Factory Must Grow: Copper" },
+      { "id": "tfmg:tfmg_decoration", "label": "Create: The Factory Must Grow: Tfmg Decoration" },
+      { "id": "tfmg:tfmg_main", "label": "Create: The Factory Must Grow: Tfmg Main" }
+    ]
+  },
+  {
+    "name": "Delightful Creators",
+    "tabs": [
+      { "id": "delightfulcreators:delightfulcreators", "label": "Delightful Creators" }
+    ]
+  },
+  {
+    "name": "Create: Numismatics",
+    "tabs": [
+      { "id": "numismatics:main", "label": "Create: Numismatics" }
+    ]
+  },
+  {
+    "name": "Create: Crystal Clear",
+    "tabs": [
+      { "id": "crystal_clear:crystal_clear_tan", "label": "Create: Crystal Clear: Crystal Clear Tan" }
+    ]
+  },
+  {
+    "name": "Create Tweaked Controllers",
+    "tabs": [
+      { "id": "create_tweaked_controllers:base", "label": "Create: Tweaked Controllers" }
+    ]
+  },
+  {
+    "name": "Create: Factory",
+    "tabs": [
+      { "id": "create_factory:create_factory", "label": "Create: Factory" }
+    ]
+  },
+  {
+    "name": "Create: Food",
+    "tabs": [
+      { "id": "createfood:createfood", "label": "Create: Food" },
+      { "id": "createfood:createfood_display", "label": "Create: Food: Createfood Display" },
+      { "id": "createfood:createfood_fluid", "label": "Create: Food: Createfood Fluid" }
+    ]
+  },
+  {
+    "name": "Create: Bitterballen",
+    "tabs": [
+      { "id": "create_bic_bit:base", "label": "Create: Bitterballen" }
+    ]
+  },
+  {
+    "name": "Create Hypertube",
+    "tabs": [
+      { "id": "create_hypertube:create_hypertubes", "label": "Create: Hypertube" }
+    ]
+  },
+  {
+    "name": "Create Sifter",
+    "tabs": [
+      { "id": "createsifter:main", "label": "Create Sifter" }
+    ]
+  },
+  {
+    "name": "Create: Mechanical spawner",
+    "tabs": [
+      { "id": "create_mechanical_spawner:main", "label": "Create: Mechanical spawner" }
+    ]
+  },
+  {
+    "name": "Create Nuclear",
+    "tabs": [
+      { "id": "createnuclear:main", "label": "Create Nuclear" }
+    ]
+  },
+  {
+    "name": "Create: Escalated",
+    "tabs": [
+      { "id": "escalated:base", "label": "Create: Escalated" }
+    ]
+  },
+  {
+    "name": "Create Ender Transmission",
+    "tabs": [
+      { "id": "createendertransmission:base", "label": "Create Ender Transmission" }
+    ]
+  },
+  {
+    "name": "Create Mechanical Extruder",
+    "tabs": [
+      { "id": "create_mechanical_extruder:main", "label": "Create Mechanical Extruder" }
+    ]
+  },
+  {
+    "name": "Create: Vibrant Vaults",
+    "tabs": [
+      { "id": "create_vibrant_vaults:base", "label": "Create: Vibrant Vaults" }
+    ]
+  },
+  {
+    "name": "CC:C Bridge",
+    "tabs": [
+      { "id": "cccbridge:cccbridge_group", "label": "Peripherals (CC:C Bridge)" },
+      { "id": "cccbridge:source_block_display_source", "label": "CC:C Bridge: Source Block Display Source" }
+    ]
+  },
+  {
+    "name": "Create: Prismatic Shine",
+    "tabs": [
+      { "id": "createprism:main", "label": "Create: Prismatic Shine" }
+    ]
+  },
+  {
+    "name": "Create cobblestone",
+    "tabs": [
+      { "id": "createcobblestone:main", "label": "Create Cobblestone" }
+    ]
+  },
+  {
+    "name": "Molten Metals",
+    "tabs": [
+      { "id": "molten_metals:spelunkery", "label": "Molten Metals: Spelunkery" }
+    ]
+  },
+  {
+    "name": "Create: Vintage Improvements",
+    "tabs": [
+      { "id": "vintageimprovements:vintage_improvement_tab", "label": "Create: Vintage Improvements" }
+    ]
+  },
+  {
+    "name": "Create: Components and Additions",
+    "tabs": [
+      { "id": "create_ca:create_ca", "label": "Create: Components and Additions" }
+    ]
+  },
+  {
+    "name": "Create: Easy Structures",
+    "tabs": [
+      { "id": "create_easy_structures:create_easy_structures", "label": "Create: Easy Structures" }
+    ]
+  },
+  {
+    "name": "Create: Storage",
+    "tabs": [
+      { "id": "fxntstorage:creative_mode_tab", "label": "Create: Storage" }
+    ]
+  },
+  {
+    "name": "Create Confectionery",
+    "tabs": [
+      { "id": "create_confectionery:create_confectionery_tab", "label": "Create Confectionery" }
+    ]
+  },
+  {
+    "name": "CBC Advanced Technology",
+    "tabs": [
+      { "id": "cbc_at:simple_tab", "label": "CBC Advanced Technology: Simple" }
+    ]
+  },
+  {
+    "name": "CBC: Compact Mount",
+    "tabs": [
+      { "id": "cbc_compact_mount:main", "label": "CBC: Compact Mount" }
+    ]
+  },
+  {
+    "name": "Create: Rainbow Compound",
+    "tabs": [
+      { "id": "rainbowcompound:rainbowcompound_group", "label": "Create: Rainbow Compound" }
+    ]
+  },
+  {
+    "name": "Create: Sound of Steam",
+    "tabs": [
+      { "id": "pipeorgans:pipe_organs", "label": "Create: Sound of Steam: Pipe Organs" }
+    ]
+  },
+  {
+    "name": "Create Propulsion: Simulated",
+    "tabs": [
+      { "id": "createpropulsion:main_tab", "label": "Create Propulsion: Simulated" },
+      { "id": "createpropulsion:propulsion_main", "label": "Create Propulsion: Simulated: Propulsion Main" },
+      { "id": "createpropulsion:propulsion_tools", "label": "Create Propulsion: Simulated: Propulsion Tools" },
+      { "id": "createpropulsion:base", "label": "Create: Propulsion" }
+    ]
+  },
+  {
+    "name": "Create Aquatic Ambitions",
+    "tabs": [
+      { "id": "create_aquatic_ambitions:tab", "label": "Create: Aquatic Ambitions" }
+    ]
+  },
+  {
+    "name": "CreateArmory",
+    "tabs": [
+      { "id": "createarmory:create_armory", "label": "Create Armory" },
+      { "id": "createarmory:create_armory_parts", "label": "Create Armory Parts" }
+    ]
+  },
+  {
+    "name": "Create: Applied Kinetics",
+    "tabs": [
+      { "id": "createappliedkinetics:createappliedkinetics", "label": "Create Applied Kinetics" }
+    ]
+  },
+  {
+    "name": "Create Factory Logistics",
+    "tabs": [
+      { "id": "create_factory_logistics:create_factory_logistics_tab", "label": "Create: Factory Logistics" }
+    ]
+  },
+  {
+    "name": "Some Assembly Required",
+    "tabs": [
+      { "id": "someassemblyrequired:main", "label": "Some Assembly Required" }
+    ]
+  },
+  {
+    "name": "Petrol's Parts",
+    "tabs": [
+      { "id": "petrolsparts:base", "label": "Petrol's Parts" }
+    ]
+  },
+  {
+    "name": "Precise Manufacturing",
+    "tabs": [
+      { "id": "prma:prma_hidden_tab", "label": "Precise Manufacturing: Prma Hidden" },
+      { "id": "prma:prma_materials_tab", "label": "Precise Manufacturing Materials" },
+      { "id": "prma:prma_tab", "label": "Precise Manufacturing" }
+    ]
+  },
+  {
+    "name": "Create Cafe",
+    "tabs": [
+      { "id": "createcafe:create_cafe_fluids", "label": "Create Cafe Fluids" },
+      { "id": "createcafe:create_cafe_items", "label": "Create Cafe" }
+    ]
+  },
+  {
+    "name": "Create: Wizardry",
+    "tabs": [
+      { "id": "create_wizardry:main", "label": "Create: Wizardry" }
+    ]
+  },
+  {
+    "name": "Create Train Parts",
+    "tabs": [
+      { "id": "create_train_parts:base", "label": "Create Train Parts" }
+    ]
+  },
+  {
+    "name": "Create: Extra Gauges",
+    "tabs": [
+      { "id": "extra_gauges:main_tab", "label": "Create: Extra Gauges" }
+    ]
+  },
+  {
+    "name": "Create: Integrated Farming",
+    "tabs": [
+      { "id": "create_integrated_farming:base", "label": "Create: Integrated Farming" }
+    ]
+  },
+  {
+    "name": "Create: Simulated Additions",
+    "tabs": [
+      { "id": "create_simulated_additions:create_simulated_additions_tab", "label": "Create Simulated Additions" }
+    ]
+  },
+  {
+    "name": "Create: Tank Defenses",
+    "tabs": [
+      { "id": "create_tank_defenses:create_tank_defenses", "label": "Create Tank Defenses" },
+      { "id": "create_tank_defenses:ctd_letters", "label": "Decor Characters" }
+    ]
+  },
+  {
+    "name": "Create: Aeroworks",
+    "tabs": [
+      { "id": "aeroworks:main", "label": "Aeroworks" }
+    ]
+  },
+  {
+    "name": "Ars Creo",
+    "tabs": [
+      { "id": "ars_creo:general", "label": "Ars Creo" }
+    ]
+  },
+  {
+    "name": "Stone Zone",
+    "tabs": [
+      { "id": "stonezone:all_stones", "label": "Stone Zone: All Stones" },
+      { "id": "stonezone:example_palette_texture", "label": "Stone Zone: Example Palette Texture" },
+      { "id": "stonezone:stonezone", "label": "Stone Zone" },
+      { "id": "stonezone:twig", "label": "Stone Zone: Twig" }
+    ]
+  },
+  {
+    "name": "Create Train Utilities",
+    "tabs": [
+      { "id": "trainutilities:doors_tab", "label": "Create: TrainUtilities - Doors" },
+      { "id": "trainutilities:trainutils_tab", "label": "Create: TrainUtilities" }
+    ]
+  },
+  {
+    "name": "CreateSweetsAndTreets",
+    "tabs": [
+      { "id": "createsweetsandtreets:bake_a_cake", "label": "Create: Sweets And Treats" }
+    ]
+  },
+  {
+    "name": "Create Metallurgy",
+    "tabs": [
+      { "id": "createmetallurgy:createmetallurgy", "label": "Create: Metallurgy" }
+    ]
+  },
+  {
+    "name": "Create: Cobblemon Industrialized",
+    "tabs": [
+      { "id": "create_cobblemon:create_x_cobblemon", "label": "Cobblemon Industrialized" }
+    ]
+  },
+  {
+    "name": "Destroy",
+    "tabs": [
+      { "id": "destroy:base", "label": "Destroy" },
+      { "id": "destroy:custom_explosive_mix_charge", "label": "Destroy: Custom Explosive Mix Charge" },
+      { "id": "destroy:custom_explosive_mix_shell", "label": "Destroy: Custom Explosive Mix Shell" },
+      { "id": "destroy:gas_mask", "label": "Destroy: Gas Mask" }
+    ]
+  },
+  {
+    "name": "Gears n' Kinetics",
+    "tabs": [
+      { "id": "gnkinetics:base_tab", "label": "Gears n' Kinetics" }
+    ]
+  },
+  {
+    "name": "Create: Ironworks",
+    "tabs": [
+      { "id": "create_ironworks:create_ironworks", "label": "Create Ironworks" }
+    ]
+  },
+  {
+    "name": "Create: Love and War",
+    "tabs": [
+      { "id": "createloveandwar:love_and_war_tab", "label": "Create: Love and War" }
+    ]
+  },
+  {
+    "name": "Missions",
+    "tabs": [
+      { "id": "missions:base", "label": "Create: Missions" }
+    ]
+  },
+  {
+    "name": "Northstar Redux",
+    "tabs": [
+      { "id": "northstar:blocks", "label": "Northstar Blocks" },
+      { "id": "northstar:creative_menu", "label": "Northstar Redux: Creative Menu" },
+      { "id": "northstar:items", "label": "Northstar Items" },
+      { "id": "northstar:tech", "label": "Northstar Technology" },
+      { "id": "northstar:northstarblocks", "label": "Northstar Blocks: Northstarblocks" },
+      { "id": "northstar:northstartab", "label": "Northstar Items: Northstartab" },
+      { "id": "northstar:northstartech", "label": "Northstar Tech" }
+    ]
+  },
+  {
+    "name": "Create Optical Mod",
+    "tabs": [
+      { "id": "create_optical:co_base", "label": "Optical Tab" }
+    ]
+  },
+  {
+    "name": "Create: Metalwork",
+    "tabs": [
+      { "id": "createmetalwork:base", "label": "Create: Metalwork" }
+    ]
+  },
+  {
+    "name": "Create: Deep Dark",
+    "tabs": [
+      { "id": "create_deep_dark:create_deep_dark", "label": "Create: Deep Dark" }
+    ]
+  },
+  {
+    "name": "Create Abyss",
+    "tabs": [
+      { "id": "create_abyss:abyss_tab", "label": "Create Abyss" }
+    ]
+  },
+  {
+    "name": "Create: More Drill Heads",
+    "tabs": [
+      { "id": "createmoredrillheads:createmoredrillheads", "label": "Create: More Drill Heads" },
+      { "id": "createmoredrillheads:more_drill_heads", "label": "Create: More Drill Heads: More Drill Heads" }
+    ]
+  },
+  {
+    "name": "Create: Synthetic Pressure",
+    "tabs": [
+      { "id": "create_synthetic_pressure:main", "label": "Create: High Pressure" }
+    ]
+  },
+  {
+    "name": "Create: Pantographs & Wires",
+    "tabs": [
+      { "id": "pantographsandwires:main", "label": "Create: Pantographs & Wires" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics: Toolgun",
+    "tabs": [
+      { "id": "create_aeronautics_toolgun:main", "label": "Create Aeronautics: Toolgun" }
+    ]
+  },
+  {
+    "name": "Create: Winery",
+    "tabs": [
+      { "id": "create_winery:winery", "label": "Winery" }
+    ]
+  },
+  {
+    "name": "Create: Nuke",
+    "tabs": [
+      { "id": "create_nuke:creative_tab_nuke", "label": "Create: Nuke" }
+    ]
+  },
+  {
+    "name": "Create: Gunsmithing",
+    "tabs": [
+      { "id": "cgs:mod_items", "label": "Create: Gunsmithing" }
+    ]
+  },
+  {
+    "name": "Create:Egg Production",
+    "tabs": [
+      { "id": "createeggproduction:main_tab", "label": "Create:Egg Production" }
+    ]
+  },
+  {
+    "name": "Create Unbreakable Tools Mod",
+    "tabs": [
+      { "id": "create_unbreakable:tab", "label": "Create unbreakable" }
+    ]
+  },
+  {
+    "name": "Create: Crystallized",
+    "tabs": [
+      { "id": "crystallized:itemtab", "label": "Create: Crystallized: Itemtab" }
+    ]
+  },
+  {
+    "name": "Create: Broken Bad ReBroken",
+    "tabs": [
+      { "id": "createbb:createbb", "label": "Create: Broken Bad" }
+    ]
+  },
+  {
+    "name": "Create Quality of Life",
+    "tabs": [
+      { "id": "createqol:tab", "label": "Create : Quality of Life" }
+    ]
+  },
+  {
+    "name": "Create Blueprint Tweaks",
+    "tabs": [
+      { "id": "create_blueprint_tweaks:create_blueprint_tweaks", "label": "Create Blueprint Tweaks" }
+    ]
+  },
+  {
+    "name": "Create Missiles",
+    "tabs": [
+      { "id": "createmissiles:ancient_chassis", "label": "Create Missiles: Ancient Chassis" },
+      { "id": "createmissiles:ancient_thruster", "label": "Create Missiles: Ancient Thruster" },
+      { "id": "createmissiles:ancient_warhead", "label": "Create Missiles: Ancient Warhead" },
+      { "id": "createmissiles:annoying_warhead", "label": "Create Missiles: Annoying Warhead" },
+      { "id": "createmissiles:biome_brush_warhead", "label": "Create Missiles: Biome Brush Warhead" },
+      { "id": "createmissiles:blazing_warhead", "label": "Create Missiles: Blazing Warhead" },
+      { "id": "createmissiles:createmissiles", "label": "Example Mod Tab" },
+      { "id": "createmissiles:direct_hit_warhead", "label": "Create Missiles: Direct Hit Warhead" },
+      { "id": "createmissiles:dragon_chassis", "label": "Create Missiles: Dragon Chassis" },
+      { "id": "createmissiles:dragon_thruster", "label": "Create Missiles: Dragon Thruster" },
+      { "id": "createmissiles:dragon_warhead", "label": "Create Missiles: Dragon Warhead" },
+      { "id": "createmissiles:excavator_chassis", "label": "Create Missiles: Excavator Chassis" },
+      { "id": "createmissiles:excavator_thruster", "label": "Create Missiles: Excavator Thruster" },
+      { "id": "createmissiles:excavator_warhead", "label": "Create Missiles: Excavator Warhead" },
+      { "id": "createmissiles:firework_chassis", "label": "Create Missiles: Firework Chassis" },
+      { "id": "createmissiles:firework_thruster", "label": "Create Missiles: Firework Thruster" },
+      { "id": "createmissiles:firework_warhead", "label": "Create Missiles: Firework Warhead" },
+      { "id": "createmissiles:flaming_chassis", "label": "Create Missiles: Flaming Chassis" },
+      { "id": "createmissiles:flaming_thruster", "label": "Create Missiles: Flaming Thruster" },
+      { "id": "createmissiles:flaming_warhead", "label": "Create Missiles: Flaming Warhead" },
+      { "id": "createmissiles:frost_chassis", "label": "Create Missiles: Frost Chassis" },
+      { "id": "createmissiles:frost_thruster", "label": "Create Missiles: Frost Thruster" },
+      { "id": "createmissiles:frost_warhead", "label": "Create Missiles: Frost Warhead" },
+      { "id": "createmissiles:frozen_chassis", "label": "Create Missiles: Frozen Chassis" },
+      { "id": "createmissiles:frozen_thruster", "label": "Create Missiles: Frozen Thruster" },
+      { "id": "createmissiles:frozen_warhead", "label": "Create Missiles: Frozen Warhead" },
+      { "id": "createmissiles:guardian_warhead", "label": "Create Missiles: Guardian Warhead" },
+      { "id": "createmissiles:infernal_warhead", "label": "Create Missiles: Infernal Warhead" },
+      { "id": "createmissiles:messy_warhead", "label": "Create Missiles: Messy Warhead" },
+      { "id": "createmissiles:shulker_box_warhead", "label": "Create Missiles: Shulker Box Warhead" },
+      { "id": "createmissiles:teleportation_warhead", "label": "Create Missiles: Teleportation Warhead" },
+      { "id": "createmissiles:tunneler_warhead", "label": "Create Missiles: Tunneler Warhead" },
+      { "id": "createmissiles:withered_chassis", "label": "Create Missiles: Withered Chassis" },
+      { "id": "createmissiles:withered_thruster", "label": "Create Missiles: Withered Thruster" },
+      { "id": "createmissiles:withered_warhead", "label": "Create Missiles: Withered Warhead" }
+    ]
+  },
+  {
+    "name": "Create: Deepfried",
+    "tabs": [
+      { "id": "create_deepfried:base", "label": "Create: Deepfried" }
+    ]
+  },
+  {
+    "name": "Modern Train Parts",
+    "tabs": [
+      { "id": "moderntrainparts:main", "label": "Modern Train Parts" }
+    ]
+  },
+  {
+    "name": "Create Guardian Beam Defense",
+    "tabs": [
+      { "id": "creategbd:main", "label": "Create Guardian Beam Defense" }
+    ]
+  },
+  {
+    "name": "Create: Abyss Catalysis",
+    "tabs": [
+      { "id": "sculkcatalyticchamber:base", "label": "Create: Abyss Catalysis" }
+    ]
+  },
+  {
+    "name": "Create Teleporters Remastered",
+    "tabs": [
+      { "id": "createteleporters:create_teleporters", "label": "Create Teleporters" }
+    ]
+  },
+  {
+    "name": "Create Mechanical Chicken",
+    "tabs": [
+      { "id": "create_mechanical_chicken:main", "label": "Create Mechanical Chicken" }
+    ]
+  },
+  {
+    "name": "Create Immersive TaCZ",
+    "tabs": [
+      { "id": "createimmersivetacz:creative_tab", "label": "Create Immersive TaCZ" }
+    ]
+  },
+  {
+    "name": "Create: More Features",
+    "tabs": [
+      { "id": "create_mf:create_more_features", "label": "Create: More Features" }
+    ]
+  },
+  {
+    "name": "Create: Transmission",
+    "tabs": [
+      { "id": "createtransmission:main", "label": "Create: Transmission" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics: Gyroscope Stabilizers",
+    "tabs": [
+      { "id": "gyro:main", "label": "Gyro" }
+    ]
+  },
+  {
+    "name": "Create Tracks+",
+    "tabs": [
+      { "id": "tracks:tracks", "label": "Create Tracks+" }
+    ]
+  },
+  {
+    "name": "Create: Unify",
+    "tabs": [
+      { "id": "unify:base", "label": "Create: Unify" }
+    ]
+  },
+  {
+    "name": "Create Gadgets & Gizmos",
+    "tabs": [
+      { "id": "createthrusters:banner_blocks", "label": "Create Gadgets & Gizmos: Banner Blocks" },
+      { "id": "createthrusters:banner_items", "label": "Create Gadgets & Gizmos: Banner Items" },
+      { "id": "createthrusters:banner_special", "label": "Create Gadgets & Gizmos: Banner Special" },
+      { "id": "createthrusters:lomens", "label": "Lomens" },
+      { "id": "createthrusters:main", "label": "Create Gadgets & Gizmos" }
+    ]
+  },
+  {
+    "name": "Compressed Creativity",
+    "tabs": [
+      { "id": "compressedcreativity:base", "label": "Compressed Creativity" }
+    ]
+  },
+  {
+    "name": "Create Fully Automated NeoForge",
+    "tabs": [
+      { "id": "create_fully_automated_neoforge:create_fully_automated", "label": "Create Fully Automated" }
+    ]
+  },
+  {
+    "name": "Create: Netherless",
+    "tabs": [
+      { "id": "create_netherless:create_netherless_tab", "label": "Create: Netherless" },
+      { "id": "create_netherless:create_netherless", "label": "Create: Netherless: Create Netherless" }
+    ]
+  },
+  {
+    "name": "Analog Audio",
+    "tabs": [
+      { "id": "analogaudio:analog_audio_tab", "label": "Analog Audio" }
+    ]
+  },
+  {
+    "name": "Create: Arms Race",
+    "tabs": [
+      { "id": "createarmsrace:createarmsrace", "label": "Create: Arms Race" }
+    ]
+  },
+  {
+    "name": "Create: Totem Factory",
+    "tabs": [
+      { "id": "totemfactory:totem_factory", "label": "Create: Totem Factory" }
+    ]
+  },
+  {
+    "name": "Bio-Factory",
+    "tabs": [
+      { "id": "biofactory:main", "label": "Bio-Factory" }
+    ]
+  },
+  {
+    "name": "Grappling Hook Mod",
+    "tabs": [
+      { "id": "grapplemod:main", "label": "Grappling Hook Mod" }
+    ]
+  },
+  {
+    "name": "CreateButterCat",
+    "tabs": [
+      { "id": "createbuttercat:createbuttercat_tab", "label": "Create:Butter Cat" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics: Throwable Rope Connector",
+    "tabs": [
+      { "id": "create_aeronautics_throwable_rope_connector:main", "label": "Throwable Rope Connector" }
+    ]
+  },
+  {
+    "name": "Create: Klinks n' Klangs",
+    "tabs": [
+      { "id": "create_klinks_n_klangs:klinksn_klangs", "label": "Klinks n' Klangs" }
+    ]
+  },
+  {
+    "name": "Create Low-Heated",
+    "tabs": [
+      { "id": "createlowheated:base", "label": "Create Low-Heated" }
+    ]
+  },
+  {
+    "name": "Create: Smart Crafter",
+    "tabs": [
+      { "id": "smartcrafter:smartcrafter", "label": "Create: Smart Crafter" }
+    ]
+  },
+  {
+    "name": "Create: Crafts & (More) Additions",
+    "tabs": [
+      { "id": "create_more_additions:create_more_additions", "label": "Create More Additions" }
+    ]
+  },
+  {
+    "name": "Create: Numismatics Utils",
+    "tabs": [
+      { "id": "numismaticsutils:numismaticsutils_tab", "label": "Numismatics Utils" }
+    ]
+  },
+  {
+    "name": "Create: Mob Spawners",
+    "tabs": [
+      { "id": "create_mob_spawners:create_mob_spawners_tab", "label": "Create: Mob Spawners" }
+    ]
+  },
+  {
+    "name": "Create: More Girder",
+    "tabs": [
+      { "id": "createmoregirder:main_tab", "label": "Create: More Girder" }
+    ]
+  },
+  {
+    "name": "Create:Station Decor",
+    "tabs": [
+      { "id": "createstation_decor:sation_decor", "label": "Station Decor" }
+    ]
+  },
+  {
+    "name": "Applied Create",
+    "tabs": [
+      { "id": "appliedcreate:main", "label": "Applied Create" }
+    ]
+  },
+  {
+    "name": "Create: Ornithopter Glider",
+    "tabs": [
+      { "id": "createornithopterglider:createornithopterglider_tab", "label": "Create: Ornithopter Glider" }
+    ]
+  },
+  {
+    "name": "Create: Blazing Hot",
+    "tabs": [
+      { "id": "blazinghot:base", "label": "Create: Blazing Hot" },
+      { "id": "blazinghot:building", "label": "Blazing Building Blocks" }
+    ]
+  },
+  {
+    "name": "Create Mechanical Companion",
+    "tabs": [
+      { "id": "createmechanicalcompanion:createmechanicalcompaniontab", "label": "Create Mechanical Companion" }
+    ]
+  },
+  {
+    "name": "Greate",
+    "tabs": [
+      { "id": "greate:greate", "label": "Greate" }
+    ]
+  },
+  {
+    "name": "Garnished Additions",
+    "tabs": [
+      { "id": "garnished_additions:garnished_additions", "label": "Garnished Additions" }
+    ]
+  },
+  {
+    "name": "Create: Fantasizing Again",
+    "tabs": [
+      { "id": "create_fantasizing:create_fantasizing_tab", "label": "Create: Fantasizing Again" }
+    ]
+  },
+  {
+    "name": "Create Compression",
+    "tabs": [
+      { "id": "createcompression:createcompression", "label": "CreateCompression" }
+    ]
+  },
+  {
+    "name": "CreateTreadmill",
+    "tabs": [
+      { "id": "createtreadmill:treadmill", "label": "CreateTreadmill" }
+    ]
+  },
+  {
+    "name": "CROWNS",
+    "tabs": [
+      { "id": "crowns:nuclear", "label": "CROWNS" }
+    ]
+  },
+  {
+    "name": "Create: Sandpapers",
+    "tabs": [
+      { "id": "createsandpapers:tab", "label": "Create: Sandpapers" },
+      { "id": "createsandpapers:base", "label": "Create: More Sand Papers" }
+    ]
+  },
+  {
+    "name": "Create: Extra Casing",
+    "tabs": [
+      { "id": "create_extra_casing:tab", "label": "Create: Extra Casing: Tab" }
+    ]
+  },
+  {
+    "name": "CBC: Firepower Components",
+    "tabs": [
+      { "id": "cbc_firepower_components:main", "label": "Firepower Components" }
+    ]
+  },
+  {
+    "name": "Create: Better Motors",
+    "tabs": [
+      { "id": "create_better_motors:create_better_motors_tab", "label": "Create: Better Motors" }
+    ]
+  },
+  {
+    "name": "Creating Space",
+    "tabs": [
+      { "id": "creatingspace:component_tab", "label": "Component Tab" },
+      { "id": "creatingspace:machine_tab", "label": "Machine Tab" },
+      { "id": "creatingspace:minerals_tab", "label": "Minerals Tab" }
+    ]
+  },
+  {
+    "name": "Pretty In Pink",
+    "tabs": [
+      { "id": "pretty_in_pink:base", "label": "Pretty In Pink 🗿" }
+    ]
+  },
+  {
+    "name": "Create O' Plenty",
+    "tabs": [
+      { "id": "createoplenty:createoplenty_tab", "label": "Create O' Plenty" }
+    ]
+  },
+  {
+    "name": "Create: Cheese Factory",
+    "tabs": [
+      { "id": "create_cheese:cheese_factory", "label": "Cheese Factory" }
+    ]
+  },
+  {
+    "name": "Create: Mixed Casing",
+    "tabs": [
+      { "id": "create_mixed_casing:tab", "label": "Create: Mixed Casing: Tab" }
+    ]
+  },
+  {
+    "name": "VStuff",
+    "tabs": [
+      { "id": "vstuff:main", "label": "VStuff" },
+      { "id": "vstuff:styling_available", "label": "VStuff: Styling Available" }
+    ]
+  },
+  {
+    "name": "Create: Steam Powered",
+    "tabs": [
+      { "id": "steampowered:base", "label": "Create: Steam Powered" }
+    ]
+  },
+  {
+    "name": "Create Electro Energetics",
+    "tabs": [
+      { "id": "electroenergetics:base", "label": "Create: Electro Energetics" }
+    ]
+  },
+  {
+    "name": "Old infrastructure",
+    "tabs": [
+      { "id": "old_infrastructure:oldinfratab", "label": "Create: Old Infrastructure" },
+      { "id": "old_infrastructure:signaltab", "label": "Create: Old Infrastructure Signals" }
+    ]
+  },
+  {
+    "name": "Create ore excavation Plus",
+    "tabs": [
+      { "id": "create_ore_excavation_plus:create_ore_excavation_plus_tab", "label": "Create Ore Excavation Plus Tab" }
+    ]
+  },
+  {
+    "name": "Create: Security Program",
+    "tabs": [
+      { "id": "create_security:create_security_tab", "label": "Create: Security Program" }
+    ]
+  },
+  {
+    "name": "Create: Nether Industry",
+    "tabs": [
+      { "id": "createnetherindustry:main_tab", "label": "Create: Nether Industry" }
+    ]
+  },
+  {
+    "name": "Create: Peaceful",
+    "tabs": [
+      { "id": "create_peaceful:create_peaceful", "label": "Create Peaceful" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics Physics Gantry",
+    "tabs": [
+      { "id": "createaerophysicsgantry:belt_wheel", "label": "Create Aeronautics Physics Gantry: Belt Wheel" },
+      { "id": "createaerophysicsgantry:physics_gantry_carriage", "label": "Create Aeronautics Physics Gantry: Physics Gantry Carriage" },
+      { "id": "createaerophysicsgantry:physics_gantry_shaft", "label": "Create Aeronautics Physics Gantry: Physics Gantry Shaft" }
+    ]
+  },
+  {
+    "name": "Create: Ender Link",
+    "tabs": [
+      { "id": "createenderlink:cel_default", "label": "Create: Ender Link: Cel Default" }
+    ]
+  },
+  {
+    "name": "Farmer's Delight: Extended",
+    "tabs": [
+      { "id": "farmersdelight_extended:foods_tab", "label": "Farmer's Delight: Extended: Foods" }
+    ]
+  },
+  {
+    "name": "Create Chocolate Fountain",
+    "tabs": [
+      { "id": "create_chocolate_fountain:base", "label": "Create Chocolate Fountain" }
+    ]
+  },
+  {
+    "name": "Create Clothes",
+    "tabs": [
+      { "id": "createclothes:create_clothes", "label": "Create Clothes" }
+    ]
+  },
+  {
+    "name": "Mech Trowel",
+    "tabs": [
+      { "id": "mechtrowel:main", "label": "Mech Trowel" }
+    ]
+  },
+  {
+    "name": "Tram Additions",
+    "tabs": [
+      { "id": "tram_additions:tram_additions", "label": "Tram Additions" }
+    ]
+  },
+  {
+    "name": "Create Additions & Synthetics",
+    "tabs": [
+      { "id": "create_additions_synthetics:cas_filter_items", "label": "CAS Filter Items" },
+      { "id": "create_additions_synthetics:create_additions_synthetics", "label": "Create Additions & Synthetics" }
+    ]
+  },
+  {
+    "name": "Create: Bionics",
+    "tabs": [
+      { "id": "createbionics:createbionics", "label": "Create: Bionics" }
+    ]
+  },
+  {
+    "name": "Create: Schematic Compute",
+    "tabs": [
+      { "id": "create_schematic_compute:main", "label": "Create: Schematic Compute" }
+    ]
+  },
+  {
+    "name": "Create: Tools n Weapons",
+    "tabs": [
+      { "id": "create_tools_n_weapons:create_tools_n_weapons", "label": "Create Tools N Weapons" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics: Automated Logistics",
+    "tabs": [
+      { "id": "create_aeronautics_automated_logistics:logistics", "label": "Create Aeronautics: Automated Logistics" }
+    ]
+  },
+  {
+    "name": "Create: Northstar Aeronautics Bridge",
+    "tabs": [
+      { "id": "cnbridge:main", "label": "Create: Northstar Aeronautics Bridge" }
+    ]
+  },
+  {
+    "name": "Create: Sound of Steam: Tuning Wrench",
+    "tabs": [
+      { "id": "tuningwrench:tuningwrenchtab", "label": "Create: Sound of Steam: Tuning Wrench" }
+    ]
+  },
+  {
+    "name": "Aeronautics: Simulated Copycats",
+    "tabs": [
+      { "id": "sim_copycats:tab", "label": "Aeronautics: Simulated Copycats" }
+    ]
+  },
+  {
+    "name": "More Create Burners",
+    "tabs": [
+      { "id": "moreburners:moreburners_tab", "label": "More Burners" }
+    ]
+  },
+  {
+    "name": "Create: Tradeworks",
+    "tabs": [
+      { "id": "tradeworks:base", "label": "Create: Tradeworks" }
+    ]
+  },
+  {
+    "name": "Create: Tramways",
+    "tabs": [
+      { "id": "tramways:main", "label": "Create: Tramways" }
+    ]
+  },
+  {
+    "name": "Create: Mechanical Botany",
+    "tabs": [
+      { "id": "mechanical_botany:mechanical_botany", "label": "Create: Mechanical Botany" }
+    ]
+  },
+  {
+    "name": "Create FluidLogistics",
+    "tabs": [
+      { "id": "fluidlogistics:fluidlogistics_tab", "label": "Create: Fluid Logistics" }
+    ]
+  },
+  {
+    "name": "Create: Train Lights",
+    "tabs": [
+      { "id": "ctl:ctl_tab", "label": "Create Train Lights" }
+    ]
+  },
+  {
+    "name": "Create: Meta Logistics",
+    "tabs": [
+      { "id": "createmetalogistics:item_group", "label": "Create: Meta Logistics" }
+    ]
+  },
+  {
+    "name": "Create: Occult Engineering",
+    "tabs": [
+      { "id": "occultengineering:base", "label": "Create: Occult Engineering" }
+    ]
+  },
+  {
+    "name": "Create Cobblemon Balls Overhaul",
+    "tabs": [
+      { "id": "createmonballsoverhaul:create_cobblemon_balls_overhaul_items_tab", "label": "Create Cobblemon Balls Overhaul" },
+      { "id": "createmonballsoverhaul:create_cobblemon_balls_overhaul_lids_tab", "label": "Create Cobblemon Balls Overhaul: Create Cobblemon Balls Overhaul Lids" }
+    ]
+  },
+  {
+    "name": "Deep Drilling",
+    "tabs": [
+      { "id": "deepdrilling:main", "label": "Deep Drilling" }
+    ]
+  },
+  {
+    "name": "Create: Blaze Burner Fuels",
+    "tabs": [
+      { "id": "create_blaze_burner_fuels:create_blaze_burner_fuels", "label": "Create: Blaze Burner Fuels" }
+    ]
+  },
+  {
+    "name": "AeroEngine",
+    "tabs": [
+      { "id": "aeroengineering:aero_engineering_tab", "label": "Aero Engineering" }
+    ]
+  },
+  {
+    "name": "Create: Compat Core",
+    "tabs": [
+      { "id": "create_compat_core:create_compat_core", "label": "Create: Compat Core" }
+    ]
+  },
+  {
+    "name": "CreateHavenQualities",
+    "tabs": [
+      { "id": "createhaven:tab", "label": "Create: Haven Qualities" }
+    ]
+  },
+  {
+    "name": "Create: Weaponry Tinkering",
+    "tabs": [
+      { "id": "create_wt:create_wt", "label": "Create: Weaponry Tinkering" },
+      { "id": "create_wt:create_wt_weapons", "label": "Create: Weaponry Tinkering: Create Wt Weapons" }
+    ]
+  },
+  {
+    "name": "Create Simple Generator",
+    "tabs": [
+      { "id": "create_simple_generator:create_simple_generator_tab", "label": "Create: Simple Generator" }
+    ]
+  },
+  {
+    "name": "Create Compact Transmission",
+    "tabs": [
+      { "id": "create_compact_transmission:main", "label": "Create Compact Transmission" }
+    ]
+  },
+  {
+    "name": "Schematic Energistics",
+    "tabs": [
+      { "id": "schematicenergistics:schematic_energistics_tab", "label": "Schematic Energistics" }
+    ]
+  },
+  {
+    "name": "Waystone & Create",
+    "tabs": [
+      { "id": "waystoneandcreate:tab", "label": "Ducker Addons" }
+    ]
+  },
+  {
+    "name": "LinearBearing",
+    "tabs": [
+      { "id": "linearbearing:linear_bearing_tab", "label": "Create: Linear Bearing" }
+    ]
+  },
+  {
+    "name": "Create: Drinks",
+    "tabs": [
+      { "id": "create_drinks:create_drinks_tab", "label": "Create: Drinks" }
+    ]
+  },
+  {
+    "name": "Create: Blockchain",
+    "tabs": [
+      { "id": "createblockchain:createblockchain_tab", "label": "Example Mod Tab" }
+    ]
+  },
+  {
+    "name": "Create: Dimension, Steamworks Realm",
+    "tabs": [
+      { "id": "create_dimension:createdimensiontab", "label": "Create: Dimension" }
+    ]
+  },
+  {
+    "name": "CreateDoener",
+    "tabs": [
+      { "id": "createdoener:doener_tab", "label": "CreateDoener" }
+    ]
+  },
+  {
+    "name": "Create Vinery",
+    "tabs": [
+      { "id": "createvinery:cv_items", "label": "Create Vinery: Cv Items" }
+    ]
+  },
+  {
+    "name": "Create Designed Decor",
+    "tabs": [
+      { "id": "create_designed_decor:designed_decor", "label": "Designed Decor" }
+    ]
+  },
+  {
+    "name": "Create: Better Smithing Templates",
+    "tabs": [
+      { "id": "create_better_smithing_templates:create_better_smithing_templates", "label": "Create: Better Smithing Templates" }
+    ]
+  },
+  {
+    "name": "Railways Untold",
+    "tabs": [
+      { "id": "railwaysuntold:railwaysuntold_tab", "label": "Railways Untold" }
+    ]
+  },
+  {
+    "name": "Create: Valkyrien Logistics",
+    "tabs": [
+      { "id": "valkyrien_logistics:valkyrien_logistics", "label": "Valkyrien Logistics" }
+    ]
+  },
+  {
+    "name": "Wind Tunnel",
+    "tabs": [
+      { "id": "windtunnel:main", "label": "Wind Tunnel" }
+    ]
+  },
+  {
+    "name": "Create Cobblemon Potion",
+    "tabs": [
+      { "id": "create_cobblemon_potion:create_cobblemon_potion", "label": "Create Cobblemon Potion" }
+    ]
+  },
+  {
+    "name": "Create: Rock & Stone",
+    "tabs": [
+      { "id": "create_rns:create_rns", "label": "Create: Rock & Stone" }
+    ]
+  },
+  {
+    "name": "Create: Garnished",
+    "tabs": [
+      { "id": "creategarnished:tab", "label": "Create: Garnished" },
+      { "id": "creategarnished:tab_blocks", "label": "Create: Garnished: Tab Blocks" }
+    ]
+  },
+  {
+    "name": "CreateFluidStuffs",
+    "tabs": [
+      { "id": "createfluidstuffs:base", "label": "Create:Fluid Stuffs" }
+    ]
+  },
+  {
+    "name": "Tofu Create",
+    "tabs": [
+      { "id": "tofucreate:tofu_create", "label": "TofuCreate" }
+    ]
+  },
+  {
+    "name": "Create: Dimensions",
+    "tabs": [
+      { "id": "createdimensions:createdimensions", "label": "Create: Dimensions" }
+    ]
+  },
+  {
+    "name": "Create: Cola Factory",
+    "tabs": [
+      { "id": "create_cola_factory:cola_factory", "label": "Cola Factory" }
+    ]
+  },
+  {
+    "name": "Create: Wrapped",
+    "tabs": [
+      { "id": "create_wrapped:create_wrapped", "label": "Wrapped" }
+    ]
+  },
+  {
+    "name": "Create Buzzy Beez",
+    "tabs": [
+      { "id": "cbbees:base_creative_tab", "label": "Buzzy Bees" }
+    ]
+  },
+  {
+    "name": "Create: Currency Shops",
+    "tabs": [
+      { "id": "create_currency_shops:base", "label": "Create: Currency Shops" },
+      { "id": "create_currency_shops:coin_drafter", "label": "Create: Currency Shops: Coin Drafter" }
+    ]
+  },
+  {
+    "name": "Create: More Farmables",
+    "tabs": [
+      { "id": "create_more_farmables:create_more_farmables_tab", "label": "Create: More Farmables" }
+    ]
+  },
+  {
+    "name": "Create: Genderless",
+    "tabs": [
+      { "id": "creategenderless:creative_mode_tab", "label": "Create: Genderless" }
+    ]
+  },
+  {
+    "name": "Create More Blocks",
+    "tabs": [
+      { "id": "create_more_blocks:create_more_blocks", "label": "Create More Blocks" }
+    ]
+  },
+  {
+    "name": "Chemica",
+    "tabs": [
+      { "id": "chemica:main", "label": "Main" }
+    ]
+  },
+  {
+    "name": "Create: Train Announcer",
+    "tabs": [
+      { "id": "create_train_announcer:train_announcer_tab", "label": "Create: Train Announcer" }
+    ]
+  },
+  {
+    "name": "Create Militarized",
+    "tabs": [
+      { "id": "create_militarized:create_militarized", "label": "Create Militarized" }
+    ]
+  },
+  {
+    "name": "Create Stats and Numbers",
+    "tabs": [
+      { "id": "create_stats:create_stats_tab", "label": "Create Stats and Numbers" }
+    ]
+  },
+  {
+    "name": "TinyCreate",
+    "tabs": [
+      { "id": "tinycreate:link_menu", "label": "TinyCreate: Link Menu" },
+      { "id": "tinycreate:tiny_redstone_link", "label": "TinyCreate: Tiny Redstone Link" },
+      { "id": "tinycreate:tinycreate_tab", "label": "TinyCreate" }
+    ]
+  },
+  {
+    "name": "Create: Aero Cables",
+    "tabs": [
+      { "id": "aerocables:aerocables", "label": "Aerocables" }
+    ]
+  },
+  {
+    "name": "Create Airducts",
+    "tabs": [
+      { "id": "create_airducts:main", "label": "Create: Air Ducts" }
+    ]
+  },
+  {
+    "name": "Create: Defensive",
+    "tabs": [
+      { "id": "createdefensive:createdefensive_armor", "label": "Create: Defensive" },
+      { "id": "createdefensive:createdefensive_deco", "label": "Create: Defensive: Createdefensive Deco" },
+      { "id": "createdefensive:createdefensive_items", "label": "Create: Defensive: Createdefensive Items" },
+      { "id": "createdefensive:createdefensive_toolsweapons", "label": "Create: Defensive: Createdefensive Toolsweapons" },
+      { "id": "createdefensive:createdefensive_weaponry", "label": "Create: Defensive: Createdefensive Weaponry" }
+    ]
+  },
+  {
+    "name": "Stabilized",
+    "tabs": [
+      { "id": "stabilized:stabilized", "label": "Stabilized" }
+    ]
+  },
+  {
+    "name": "Simulated Gauges",
+    "tabs": [
+      { "id": "simulated_gauges:icon", "label": "Simulated Gauges: Icon" },
+      { "id": "simulated_gauges:tab", "label": "Simulated Gauges: Tab" }
+    ]
+  },
+  {
+    "name": "Create: Numismatics Crafts",
+    "tabs": [
+      { "id": "create_numismatics_crafts:create_numismatics_tab", "label": "Create: Numismatics Extra Crafts" }
+    ]
+  },
+  {
+    "name": "Create: BalancedFlight",
+    "tabs": [
+      { "id": "balancedflight:base", "label": "Create: BalancedFlight" }
+    ]
+  },
+  {
+    "name": "Create: Randomize Filters",
+    "tabs": [
+      { "id": "createrandomizefilters:main", "label": "Create: Randomize Filters" }
+    ]
+  },
+  {
+    "name": "Create: Cultivation Craft",
+    "tabs": [
+      { "id": "create_cultivation:main_tab", "label": "Create: Cultivation Craft" }
+    ]
+  },
+  {
+    "name": "Simulated Addition",
+    "tabs": [
+      { "id": "simulated_addition:building_blocks_tab", "label": "Simulated Addition: Building Blocks" },
+      { "id": "simulated_addition:main_tab", "label": "Simulated Addition" }
+    ]
+  },
+  {
+    "name": "Create Improve",
+    "tabs": [
+      { "id": "createimp:createimp_tab", "label": "Create Improve" }
+    ]
+  },
+  {
+    "name": "Create Overpowered",
+    "tabs": [
+      { "id": "create_overpowered:create_overpowered", "label": "Create Overpowered" }
+    ]
+  },
+  {
+    "name": "Create:Mechanical Confection",
+    "tabs": [
+      { "id": "createmechanicalconfection:main_tab", "label": "Create:Mechanical Confection" }
+    ]
+  },
+  {
+    "name": "Create: Enlightend",
+    "tabs": [
+      { "id": "create_enlightend:create_enlightend_tab", "label": "Create: Enlightend" }
+    ]
+  },
+  {
+    "name": "Create Nether Vinery",
+    "tabs": [
+      { "id": "createnv:cv_items", "label": "Create Nether Vinery: Cv Items" }
+    ]
+  },
+  {
+    "name": "Create: Chromatic Return",
+    "tabs": [
+      { "id": "createchromaticreturn:create_chromatic_return", "label": "Create Chromatic Return's Items" },
+      { "id": "createchromaticreturn:create_chromatic_return_tools", "label": "Create Chromatic Return's Tools" }
+    ]
+  },
+  {
+    "name": "Create & Conquer",
+    "tabs": [
+      { "id": "createconquer:createconquer_tab", "label": "Create & Conquer" },
+      { "id": "createconquer:decoration_tab", "label": "Create & Conquer: Decoration" },
+      { "id": "createconquer:incomplete_part_tab", "label": "Create & Conquer: Incomplete Part" },
+      { "id": "createconquer:item_cast_tab", "label": "Create & Conquer: Item Cast" },
+      { "id": "createconquer:weapon_tab", "label": "Create & Conquer: Weapon" }
+    ]
+  },
+  {
+    "name": "Create: Solar Powered",
+    "tabs": [
+      { "id": "createsolar:main", "label": "Create: Solar Powered" }
+    ]
+  },
+  {
+    "name": "Create: Creator's Sword",
+    "tabs": [
+      { "id": "creatorsword:creator_sword", "label": "Creator's Sword" }
+    ]
+  },
+  {
+    "name": "Create: Colorful Catalysts",
+    "tabs": [
+      { "id": "colorful_catalysts:main", "label": "Create: Colorful Catalysts" }
+    ]
+  },
+  {
+    "name": "Create: Ore Factory",
+    "tabs": [
+      { "id": "create_ore_factory:createorefactory", "label": "Create: Ore Factory" }
+    ]
+  },
+  {
+    "name": "Create: Colorful Pipes",
+    "tabs": [
+      { "id": "colorfulpipes:base", "label": "Create: Colorful Pipes" },
+      { "id": "colorfulpipes:palettes", "label": "Colorful Pipes Building Blocks" }
+    ]
+  },
+  {
+    "name": "Create delicious teas",
+    "tabs": [
+      { "id": "createtea:createtea", "label": "Create delicious teas" }
+    ]
+  },
+  {
+    "name": "Create: Trial & Error",
+    "tabs": [
+      { "id": "trialanderror:trialanderror_tab", "label": "Create: Trial & Error" }
+    ]
+  },
+  {
+    "name": "Create more packages",
+    "tabs": [
+      { "id": "ccomunityboxes:box_tab", "label": "Create more packages: Box" }
+    ]
+  },
+  {
+    "name": "Create: Beamline",
+    "tabs": [
+      { "id": "create_beamline:create_beamline", "label": "Create: Beamline" }
+    ]
+  },
+  {
+    "name": "Create: Item Drawers",
+    "tabs": [
+      { "id": "create_item_drawers:creative_mode_tab", "label": "Create: Item Drawers" }
+    ]
+  },
+  {
+    "name": "Create: Armored Constructs",
+    "tabs": [
+      { "id": "arcon:arcon_tab", "label": "Create: Armored Constructs" }
+    ]
+  },
+  {
+    "name": "Create: Reforged Foundations",
+    "tabs": [
+      { "id": "reforgedfoundations:reforged_foundations_tab", "label": "Reforged Foundations" }
+    ]
+  },
+  {
+    "name": "Create Grappling Hooks",
+    "tabs": [
+      { "id": "addon_gancho:connector", "label": "Create Grappling Hooks: Connector" },
+      { "id": "addon_gancho:grappling_hook", "label": "Create Grappling Hooks" }
+    ]
+  },
+  {
+    "name": "Create: Proximity",
+    "tabs": [
+      { "id": "createproximity:base", "label": "Create: Proximity" }
+    ]
+  },
+  {
+    "name": "create: Fuel Motor",
+    "tabs": [
+      { "id": "create_fuel_motor:create_better_motors_tab", "label": "Create: Fuel Motor" }
+    ]
+  },
+  {
+    "name": "Create: Modern Tech",
+    "tabs": [
+      { "id": "createmoderntech:warp_warp", "label": "Create: Modern Tech" }
+    ]
+  },
+  {
+    "name": "Create: Advanced Logistics",
+    "tabs": [
+      { "id": "createadvlogistics:createadvlogistics", "label": "Create: Advanced Logistics" }
+    ]
+  },
+  {
+    "name": "Aeronautics Covers",
+    "tabs": [
+      { "id": "aeronauticscovers:covers_tab", "label": "Aeronautics Covers" }
+    ]
+  },
+  {
+    "name": "Lift n' Load",
+    "tabs": [
+      { "id": "create_lnl:create_lnl", "label": "Lift n' Load" }
+    ]
+  },
+  {
+    "name": "Create Propulsed",
+    "tabs": [
+      { "id": "propulsed:propulsed", "label": "Create Propulsed" }
+    ]
+  },
+  {
+    "name": "Dyeable Ropes for Create Aeronautics",
+    "tabs": [
+      { "id": "dyeable_ropes:main", "label": "Dyeable Ropes" }
+    ]
+  },
+  {
+    "name": "CreateFireFightingAdd",
+    "tabs": [
+      { "id": "createfirefightingadd:bucket_controller", "label": "CreateFireFightingAdd: Bucket Controller" },
+      { "id": "createfirefightingadd:cone_nozzle", "label": "CreateFireFightingAdd: Cone Nozzle" },
+      { "id": "createfirefightingadd:fire_hose", "label": "CreateFireFightingAdd: Fire Hose" },
+      { "id": "createfirefightingadd:fire_hose_connector", "label": "CreateFireFightingAdd: Fire Hose Connector" },
+      { "id": "createfirefightingadd:fire_hydrant_cabinet", "label": "CreateFireFightingAdd: Fire Hydrant Cabinet" },
+      { "id": "createfirefightingadd:flat_nozzle", "label": "CreateFireFightingAdd: Flat Nozzle" },
+      { "id": "createfirefightingadd:flow_meter", "label": "CreateFireFightingAdd: Flow Meter" },
+      { "id": "createfirefightingadd:high_pressure_pump", "label": "CreateFireFightingAdd: High Pressure Pump" },
+      { "id": "createfirefightingadd:multipurpose_backtank", "label": "CreateFireFightingAdd: Multipurpose Backtank" },
+      { "id": "createfirefightingadd:pipeline_turbine", "label": "CreateFireFightingAdd: Pipeline Turbine" },
+      { "id": "createfirefightingadd:tab", "label": "CreateFireFightingAdd: Tab" },
+      { "id": "createfirefightingadd:water_intake", "label": "CreateFireFightingAdd: Water Intake" }
+    ]
+  },
+  {
+    "name": "Computer Craft: Recrafted",
+    "tabs": [
+      { "id": "cc_recrafted:ccrecrafted_tab", "label": "Computer Craft: Recrafted: Ccrecrafted" }
+    ]
+  },
+  {
+    "name": "Drive By Power",
+    "tabs": [
+      { "id": "drivebypower:base", "label": "Drive By Power" }
+    ]
+  },
+  {
+    "name": "CreateNuclearTech",
+    "tabs": [
+      { "id": "createnucleartech:main", "label": "Create Nuclear Tech" }
+    ]
+  },
+  {
+    "name": "Create Kart",
+    "tabs": [
+      { "id": "create_kart:create_karttab", "label": "Create Kart" }
+    ]
+  },
+  {
+    "name": "Create: Cosmonautics",
+    "tabs": [
+      { "id": "rocketnautics:resource_tab", "label": "Create: Cosmonautics: Resource" },
+      { "id": "rocketnautics:rocketnautics", "label": "Create: Cosmonautics" },
+      { "id": "rocketnautics:world_tab", "label": "Create: Cosmonautics: World" }
+    ]
+  },
+  {
+    "name": "Create Mechanical Cow",
+    "tabs": [
+      { "id": "mechanical_cow:main", "label": "Create Mechanical Cow" }
+    ]
+  },
+  {
+    "name": "Create: Gunpowder",
+    "tabs": [
+      { "id": "creategunpowder:main_tab", "label": "Create: Gunpowder" }
+    ]
+  },
+  {
+    "name": "Create: pneumatic equipment",
+    "tabs": [
+      { "id": "create_pneuequip:create_pe", "label": "Create pneumatic equipment" }
+    ]
+  },
+  {
+    "name": "Live Radio Mod",
+    "tabs": [
+      { "id": "radiomod:radio_tab", "label": "Radio Mod" }
+    ]
+  },
+  {
+    "name": "Create: Repackaged",
+    "tabs": [
+      { "id": "repackaged:main_tab", "label": "Create: Repackaged" }
+    ]
+  },
+  {
+    "name": "Create: Cobblemon Factories",
+    "tabs": [
+      { "id": "cobblemonfactories:lids", "label": "Create: Cobblemon Factories: Lids" }
+    ]
+  },
+  {
+    "name": "Create Bakery",
+    "tabs": [
+      { "id": "createbakery:cb_items", "label": "Create Bakery: Cb Items" }
+    ]
+  },
+  {
+    "name": "Create: Diamond & Factory",
+    "tabs": [
+      { "id": "create_diamond_factory:creatediamondfactory", "label": "Create Diamond Factory" }
+    ]
+  },
+  {
+    "name": "Create: Biomimicry",
+    "tabs": [
+      { "id": "biomimicry:biomimicry_tab", "label": "Create: Biomimicry" }
+    ]
+  },
+  {
+    "name": "Tough As Nails Create Addon",
+    "tabs": [
+      { "id": "tanca:tanca_tab", "label": "Tough As Nails Create Addon" }
+    ]
+  },
+  {
+    "name": "Create Wells",
+    "tabs": [
+      { "id": "create_wells:create_wells_tab", "label": "Create Wells" }
+    ]
+  },
+  {
+    "name": "Create: Irradiated [Forge]",
+    "tabs": [
+      { "id": "create_irradiated:create_irradiated", "label": "Create: Irradiated" }
+    ]
+  },
+  {
+    "name": "Create: Alcohol Industry",
+    "tabs": [
+      { "id": "alcohol_industry:alcohol_industry", "label": "Alcohol Industry" }
+    ]
+  },
+  {
+    "name": "Frequency for Create",
+    "tabs": [
+      { "id": "frequency:frequency_create_tab", "label": "Frequency Create" }
+    ]
+  },
+  {
+    "name": "Create: Nuclear War",
+    "tabs": [
+      { "id": "create_nuclear_war:nuclear_war", "label": "Nuclear War" }
+    ]
+  },
+  {
+    "name": "CreateBetterPumps",
+    "tabs": [
+      { "id": "createbetterpumps:better_pumps", "label": "Create: Better Pumps" }
+    ]
+  },
+  {
+    "name": "Vestalihy",
+    "tabs": [
+      { "id": "vestalihy:vestalihy_tab", "label": "Vestalihy" }
+    ]
+  },
+  {
+    "name": "Create: Fallout",
+    "tabs": [
+      { "id": "create_fallout:createfallout", "label": "Create: Fallout" }
+    ]
+  },
+  {
+    "name": "Create: Cobblemon Manufactory",
+    "tabs": [
+      { "id": "cobblemon_manufactory:cm_tab", "label": "Cobblemon Manufactory" }
+    ]
+  },
+  {
+    "name": "Train Deco",
+    "tabs": [
+      { "id": "traindeco:train_deco", "label": "Train Deco Blocks" }
+    ]
+  },
+  {
+    "name": "Extra Additions",
+    "tabs": [
+      { "id": "extra_additions:extra_additions", "label": "Extra Additions" }
+    ]
+  },
+  {
+    "name": "Create Coins",
+    "tabs": [
+      { "id": "createcoins:createcoins", "label": "Create Coins" }
+    ]
+  },
+  {
+    "name": "Create Photomovement",
+    "tabs": [
+      { "id": "createphotomovement:main", "label": "Create Photomovement" }
+    ]
+  },
+  {
+    "name": "Create: Chemistry",
+    "tabs": [
+      { "id": "createchemistry:based", "label": "Create: Chemistry: Based" }
+    ]
+  },
+  {
+    "name": "Create Ars Compact",
+    "tabs": [
+      { "id": "createarscompact:hammer", "label": "Create Ars Compact: Hammer" }
+    ]
+  },
+  {
+    "name": "Create: Compact Additions",
+    "tabs": [
+      { "id": "compact_additions:main", "label": "Create: Compact Additions" }
+    ]
+  },
+  {
+    "name": "Create: Pure Glass",
+    "tabs": [
+      { "id": "createpureglass:cpg_default", "label": "Create: Pure Glass: Cpg Default" }
+    ]
+  },
+  {
+    "name": "Create: Biotech",
+    "tabs": [
+      { "id": "create_biotech:main", "label": "Create: Biotech" }
+    ]
+  },
+  {
+    "name": "Create: Power Grid LEDs",
+    "tabs": [
+      { "id": "create_power_grid_leds:main", "label": "Power Grid LEDs" }
+    ]
+  },
+  {
+    "name": "Farmer's Respite",
+    "tabs": [
+      { "id": "farmersrespite:farmersrespite", "label": "Farmer's Respite" }
+    ]
+  },
+  {
+    "name": "Create: Tutorial books",
+    "tabs": [
+      { "id": "create_tutorial_books:create_tutorial_books", "label": "Create: Tutorial Books" }
+    ]
+  },
+  {
+    "name": "Swedish Signals",
+    "tabs": [
+      { "id": "swsignal:extended_signals", "label": "Extended Signals" }
+    ]
+  },
+  {
+    "name": "Create: Droid Diamond",
+    "tabs": [
+      { "id": "create_droid_diamond:create_droid_diamond_tab", "label": "Create: Droid Diamond" }
+    ]
+  },
+  {
+    "name": "Create: Ender Gateway",
+    "tabs": [
+      { "id": "createendergateway:main_tab", "label": "Create: Ender Gateway" }
+    ]
+  },
+  {
+    "name": "CC: Create Redstone Link",
+    "tabs": [
+      { "id": "cccredstonelink:redstone_link_pocket", "label": "CC: Create Redstone Link: Redstone Link Pocket" },
+      { "id": "cccredstonelink:redstone_link_turtle", "label": "CC: Create Redstone Link: Redstone Link Turtle" }
+    ]
+  },
+  {
+    "name": "Create: Lookin' Good",
+    "tabs": [
+      { "id": "create-lookin-good:create_lookin_good", "label": "Create: Lookin' Good" }
+    ]
+  },
+  {
+    "name": "Create: Droid Netherrack",
+    "tabs": [
+      { "id": "create_droid_netherrack:create_droid_netherrack_tab", "label": "Create: Droid Netherrack" }
+    ]
+  },
+  {
+    "name": "Create Immersive Armorer Integration",
+    "tabs": [
+      { "id": "createimmersivearmorerintegration:example_tab", "label": "Create Immersive Armorer Integration: Example" }
+    ]
+  },
+  {
+    "name": "Create Springs",
+    "tabs": [
+      { "id": "createsprings:create_springs_main_tab", "label": "Create Springs" }
+    ]
+  },
+  {
+    "name": "Create Nuclear Radiation",
+    "tabs": [
+      { "id": "createnuclear_radiation:createnuclear_radiation_tab", "label": "Create Nuclear Radiation" }
+    ]
+  },
+  {
+    "name": "Dall",
+    "tabs": [
+      { "id": "dall:dall", "label": "Dall" }
+    ]
+  },
+  {
+    "name": "Create Chicken Nuggets",
+    "tabs": [
+      { "id": "createchickennuggets:createchickennuggets", "label": "Create Chicken Nuggets" }
+    ]
+  },
+  {
+    "name": "Create: Crafts & Construct",
+    "tabs": [
+      { "id": "crafts_construct:craftsand_construct", "label": "Crafts & Construct" },
+      { "id": "crafts_construct:cc_tab", "label": "Create: Crafts & Construct: Cc" }
+    ]
+  },
+  {
+    "name": "Create Sensors",
+    "tabs": [
+      { "id": "createsensors:sensors_tab", "label": "Create Sensors" }
+    ]
+  },
+  {
+    "name": "Create: Marketplace",
+    "tabs": [
+      { "id": "create_marketplace:marketplace_tab", "label": "Create: Marketplace" }
+    ]
+  },
+  {
+    "name": "Create: Delete and Repeat",
+    "tabs": [
+      { "id": "create_delete_and_repeat:create_delete_and_repeat", "label": "Create Delete And Repeat" }
+    ]
+  },
+  {
+    "name": "Create: Henry",
+    "tabs": [
+      { "id": "create_henry:base", "label": "Create: Henry" }
+    ]
+  },
+  {
+    "name": "Create: Crate Stuff",
+    "tabs": [
+      { "id": "cratestuff:cratestuff_tab", "label": "Create: Crate Stuff" }
+    ]
+  },
+  {
+    "name": "Create Fiberglass",
+    "tabs": [
+      { "id": "createfiberglass:createfiberglass_tab", "label": "Create Fiberglass" }
+    ]
+  },
+  {
+    "name": "Create: No Entities",
+    "tabs": [
+      { "id": "create_no_entities:create_no_entities_tab", "label": "Create: No Entities" }
+    ]
+  },
+  {
+    "name": "Create: Who touched my train!",
+    "tabs": [
+      { "id": "who_touched_my_train:wtmt_tab", "label": "Create: Who touched my train!: Wtmt" }
+    ]
+  },
+  {
+    "name": "Create: Superflat & Skyblock Crate",
+    "tabs": [
+      { "id": "create_ss_crate:create_ss_crate_tab", "label": "Create: Superflat & Skyblock Crate" }
+    ]
+  },
+  {
+    "name": "Create: Golems Galore",
+    "tabs": [
+      { "id": "creategolemsgalore:create_golems_galore_tab", "label": "Example Mod Tab" }
+    ]
+  },
+  {
+    "name": "Ethium Reimagined",
+    "tabs": [
+      { "id": "ethium_reimagined:ethium", "label": "Ethium" }
+    ]
+  },
+  {
+    "name": "Create Skyblock Addon",
+    "tabs": [
+      { "id": "create_skyblock_addon:createskyblockaddon", "label": "Create: skyblock addon" }
+    ]
+  },
+  {
+    "name": "Create: Solarpunk",
+    "tabs": [
+      { "id": "solarpunk:solar_punk_tab", "label": "Create: Solarpunk" }
+    ]
+  },
+  {
+    "name": "Create: Encapsulated",
+    "tabs": [
+      { "id": "create_encapsulated:pokeballcomponents_items_tab", "label": "Create: Encapsulated: Pokeballcomponents Items" }
+    ]
+  },
+  {
+    "name": "Create: Cobblemon Tweaks",
+    "tabs": [
+      { "id": "cctweaks:creative_tab", "label": "Create: Cobblemon Tweaks" }
+    ]
+  },
+  {
+    "name": "Create: Molten Metallurgy",
+    "tabs": [
+      { "id": "moltenmetals:mod_tab", "label": "Create: Molten Metallurgy" }
+    ]
+  },
+  {
+    "name": "Create: Upsizing",
+    "tabs": [
+      { "id": "upsizing:upsizing", "label": "Upsizing" }
+    ]
+  },
+  {
+    "name": "CreateTrainControl",
+    "tabs": [
+      { "id": "create_train_control:example_tab", "label": "Example Mod Tab" }
+    ]
+  },
+  {
+    "name": "Create More Seats",
+    "tabs": [
+      { "id": "cms:cms_tab", "label": "CMS Mod Tab" }
+    ]
+  },
+  {
+    "name": "Create-Linked-Thrusters",
+    "tabs": [
+      { "id": "tr4shy_thruster:tr4shy_thruster", "label": "Tr4shy Thruster" }
+    ]
+  },
+  {
+    "name": "Fluidity",
+    "tabs": [
+      { "id": "fluidity:fluidity_tab", "label": "Fluidity" }
+    ]
+  },
+  {
+    "name": "Create: Colored Chain Conveyor",
+    "tabs": [
+      { "id": "create_colored_chain_conveyor:tab", "label": "Create: Colored Chain Conveyor: Tab" }
+    ]
+  },
+  {
+    "name": "Create: Apothic Enchanting",
+    "tabs": [
+      { "id": "create_apothic_enchanting:base", "label": "Create: Apothic Enchanting" }
+    ]
+  },
+  {
+    "name": "Create: Arbitrary",
+    "tabs": [
+      { "id": "createarbitrary:createarbitrary_tab", "label": "Create Arbitrary" }
+    ]
+  },
+  {
+    "name": "Garden Mod",
+    "tabs": [
+      { "id": "gardenmod:creategarden", "label": "Garden Mod: Creategarden" }
+    ]
+  },
+  {
+    "name": "create steelskin",
+    "tabs": [
+      { "id": "create_steelskin:create_steelskin", "label": "Create Steelskin" }
+    ]
+  },
+  {
+    "name": "Create: Netherite Automation",
+    "tabs": [
+      { "id": "create_brassite:netherite_automation", "label": "Netherite Automation" }
+    ]
+  },
+  {
+    "name": "Create ReAutomated",
+    "tabs": [
+      { "id": "createreautomated:createreautomated", "label": "Create Re-Automated" }
+    ]
+  },
+  {
+    "name": "Alcubierre",
+    "tabs": [
+      { "id": "alcubierre:alcubierre_main", "label": "Alcubierre" }
+    ]
+  },
+  {
+    "name": "create-railgun",
+    "tabs": [
+      { "id": "createrailgun:createrailgun_tab", "label": "Create: Railgun" }
+    ]
+  },
+  {
+    "name": "Create: Capsule Corp.",
+    "tabs": [
+      { "id": "capsulecorp:capsule_corp", "label": "Create: Capsule Corp." }
+    ]
+  },
+  {
+    "name": "Falcon's Wither Storm Adventure: Core",
+    "tabs": [
+      { "id": "cwsmadventure:cwsmadventure", "label": "Falcon's Wither Storm Adventure: Core" }
+    ]
+  },
+  {
+    "name": "Create: Cogged Up",
+    "tabs": [
+      { "id": "cogged_up:cogged_up_base", "label": "Create: Cogged Up: Cogged Up Base" }
+    ]
+  },
+  {
+    "name": "Create: Polymer",
+    "tabs": [
+      { "id": "createpolymer:create_polymer", "label": "Create: Polymer" }
+    ]
+  },
+  {
+    "name": "Create Tank Additions",
+    "tabs": [
+      { "id": "cta:cta_tab", "label": "Create Tank Additions" }
+    ]
+  },
+  {
+    "name": "Create: Tracks In Bogs",
+    "tabs": [
+      { "id": "tracks_in_bogs:tracksinbogs", "label": "Tracks In Bogs" }
+    ]
+  },
+  {
+    "name": "Resonant Synthesis",
+    "tabs": [
+      { "id": "resonant_synthesis:tab", "label": "Resonant Synthesis" }
+    ]
+  },
+  {
+    "name": "Create: Splash and Crush",
+    "tabs": [
+      { "id": "create_splash_and_crush:splashandcrush", "label": "Splash and Crush" }
+    ]
+  },
+  {
+    "name": "Create Geography",
+    "tabs": [
+      { "id": "creategeography:creategeography_tab", "label": "Create Geography" }
+    ]
+  },
+  {
+    "name": "Cooking with Create",
+    "tabs": [
+      { "id": "cooking_with_create:cooking_with_create", "label": "Cooking With Create" }
+    ]
+  },
+  {
+    "name": "Create_Nuka",
+    "tabs": [
+      { "id": "create_nuka:create_nuka_craft", "label": "Create Nuka" }
+    ]
+  },
+  {
+    "name": "Simple Sights",
+    "tabs": [
+      { "id": "simple_sights:simple_sights", "label": "Simple sights" }
+    ]
+  },
+  {
+    "name": "Oil Canister",
+    "tabs": [
+      { "id": "oilcanister:oil_canister_tab", "label": "Oil Canister" },
+      { "id": "oilcanister:small_oil_canister", "label": "Oil Canister: Small Oil Canister" }
+    ]
+  },
+  {
+    "name": "CannonCompressedArmor",
+    "tabs": [
+      { "id": "cannoncompressedarmor:cannon_compressed_armor", "label": "CannonCompressedArmor" },
+      { "id": "cannoncompressedarmor:cobble", "label": "CannonCompressedArmor: Cobble" }
+    ]
+  },
+  {
+    "name": "Create Condensed Milk",
+    "tabs": [
+      { "id": "createcondensedmilk:createcondensedmilk", "label": "Create: Condensed Milk" }
+    ]
+  },
+  {
+    "name": "Create Magics",
+    "tabs": [
+      { "id": "create_magics:main", "label": "Create: Magics main tab" }
+    ]
+  },
+  {
+    "name": "Sky Whales",
+    "tabs": [
+      { "id": "skywhales:sky_whales", "label": "Sky Whales" }
+    ]
+  },
+  {
+    "name": "Create: sillyworks :3",
+    "tabs": [
+      { "id": "sillyworks:discs", "label": "Literally Just Polygondwanaland" },
+      { "id": "sillyworks:sillyworks", "label": "sillyworks" }
+    ]
+  },
+  {
+    "name": "Croparium: Create",
+    "tabs": [
+      { "id": "cp_create:croparium_create", "label": "Croparium: Create" }
+    ]
+  },
+  {
+    "name": "Nomad",
+    "tabs": [
+      { "id": "create_nomad:create_gearbound_menu", "label": "Create: Nomad" }
+    ]
+  },
+  {
+    "name": "Create: Korobochki",
+    "tabs": [
+      { "id": "create_kb:create_korobochke", "label": "Create: Korobochke" }
+    ]
+  },
+  {
+    "name": "Create: Under Pressure",
+    "tabs": [
+      { "id": "createunderpressure:createunderpressure", "label": "Create: Under Pressure" }
+    ]
+  },
+  {
+    "name": "Create: Props And Misc",
+    "tabs": [
+      { "id": "create_props_and_misc:create_propsandmisc", "label": "Create: Props And Misc" }
+    ]
+  },
+  {
+    "name": "Full Bloom",
+    "tabs": [
+      { "id": "full_bloom:full_bloom_tab", "label": "Full Bloom" }
+    ]
+  },
+  {
+    "name": "Create:Maximized",
+    "tabs": [
+      { "id": "createmaximized:maximized", "label": "Maximized" }
+    ]
+  },
+  {
+    "name": "Create: Mechanical Teleporter",
+    "tabs": [
+      { "id": "create_mechanical_teleporter:main", "label": "Create: Mechanical Teleporter" }
+    ]
+  },
+  {
+    "name": "Create: For Science!",
+    "tabs": [
+      { "id": "create_fs:metals", "label": "Metals" },
+      { "id": "create_fs:science", "label": "Science Decor" },
+      { "id": "create_fs:tech", "label": "Tech" }
+    ]
+  },
+  {
+    "name": "Create Frequency",
+    "tabs": [
+      { "id": "create_frequency:main", "label": "Create Frequency" }
+    ]
+  },
+  {
+    "name": "Legendary Survival X Create",
+    "tabs": [
+      { "id": "legendarysurvivaladdon:lsa_creative_tab", "label": "LSO Addon" }
+    ]
+  },
+  {
+    "name": "Pixelmon Factory",
+    "tabs": [
+      { "id": "pixelmonfactory:pixelmonfactory_tab", "label": "Pixelmon Factory" }
+    ]
+  },
+  {
+    "name": "Create: CGE",
+    "tabs": [
+      { "id": "create_cge:create_gravel_extractors", "label": "CGE - Extractors" },
+      { "id": "create_cge:create_gravel_extractors_items", "label": "CGE - Items and others" }
+    ]
+  },
+  {
+    "name": "Jack's Economy (Forked)",
+    "tabs": [
+      { "id": "jackseconomy:exporter", "label": "Jack's Economy (Forked): Exporter" },
+      { "id": "jackseconomy:jackseconomy", "label": "Jack's Economy (Forked)" }
+    ]
+  },
+  {
+    "name": "Jaffabricate",
+    "tabs": [
+      { "id": "jaffabricate:jaffabricate_tab", "label": "Jaffabricate" }
+    ]
+  },
+  {
+    "name": "Create: Horse DECIMATION",
+    "tabs": [
+      { "id": "create_horse_decimation:main", "label": "Create: Horse DECIMATION" }
+    ]
+  },
+  {
+    "name": "Create: Portable Packaging",
+    "tabs": [
+      { "id": "create_portable_packaging:create_portable_packaging_tab", "label": "Create: Portable Packaging" }
+    ]
+  },
+  {
+    "name": "Create: Ice Creams",
+    "tabs": [
+      { "id": "create_ice_creams:create_ice_creams", "label": "Create: Ice & Creams" }
+    ]
+  },
+  {
+    "name": "Better TFCR",
+    "tabs": [
+      { "id": "btfcr:btfcr_tab", "label": "Better TFCR" }
+    ]
+  },
+  {
+    "name": "Create: Mind the Gap",
+    "tabs": [
+      { "id": "create_mtg:create_mtg", "label": "Create: Mind the Gap" }
+    ]
+  },
+  {
+    "name": "SG-Tracks",
+    "tabs": [
+      { "id": "sg_tracks:tracks_tab", "label": "SG-Tracks" }
+    ]
+  },
+  {
+    "name": "Create: More Cakes",
+    "tabs": [
+      { "id": "create_more_cakes:create_more_cakes", "label": "Create: More Cakes" }
+    ]
+  },
+  {
+    "name": "Create Paper Line",
+    "tabs": [
+      { "id": "create_paper_line:main", "label": "Create Paper Line" }
+    ]
+  },
+  {
+    "name": "Create: Uncraftables Automated",
+    "tabs": [
+      { "id": "create_uncraftables_automated:createuncraftablecraftablescreativetab", "label": "Create: Uncraftables Automated" }
+    ]
+  },
+  {
+    "name": "Create: Simple Coins",
+    "tabs": [
+      { "id": "create_simple_coins:create_simple_coins_tab", "label": "Create: Simple Coins" }
+    ]
+  },
+  {
+    "name": "Create: New Tier",
+    "tabs": [
+      { "id": "create_new_tier:create_new_tier_tab", "label": "Create: New Tier" }
+    ]
+  },
+  {
+    "name": "Create: Back Off!",
+    "tabs": [
+      { "id": "createbackoff:back_off", "label": "Create: Back Off!" }
+    ]
+  },
+  {
+    "name": "Horse Food",
+    "tabs": [
+      { "id": "advanced_horses:horse_food_tab", "label": "Horse Food" }
+    ]
+  },
+  {
+    "name": "Create: Beyond Ages",
+    "tabs": [
+      { "id": "crembronze:crembronze_tab", "label": "Create: Beyond Ages" }
+    ]
+  },
+  {
+    "name": "create: 40000",
+    "tabs": [
+      { "id": "createwarhammer:create_40000", "label": "Create: 40000" }
+    ]
+  },
+  {
+    "name": "Create: Individual Train Speeds",
+    "tabs": [
+      { "id": "create_individual_train_speeds:main", "label": "Create: Individual Train Speeds" }
+    ]
+  },
+  {
+    "name": "Create: Block Plus",
+    "tabs": [
+      { "id": "createblockplus:create_block_plus_tab", "label": "Create: Block Plus" }
+    ]
+  },
+  {
+    "name": "Create Deco Generator",
+    "tabs": [
+      { "id": "decobuild:molten_liquid", "label": "Create Deco Generator: Molten Liquid" }
+    ]
+  },
+  {
+    "name": "Create: GearBound",
+    "tabs": [
+      { "id": "gearbound:tutorial_tab", "label": "GearBound" }
+    ]
+  },
+  {
+    "name": "Automate Materials Remake",
+    "tabs": [
+      { "id": "automatemat:mob_essense_tab", "label": "Automate Materials" }
+    ]
+  },
+  {
+    "name": "Create: Turbines",
+    "tabs": [
+      { "id": "turbines:turbines", "label": "Create: Turbines" }
+    ]
+  },
+  {
+    "name": "Create: Soda Pop",
+    "tabs": [
+      { "id": "create_soda_pop:create_soda_pop_plants", "label": "Create: Soda Pop" }
+    ]
+  },
+  {
+    "name": "Create: Crafts & Stuff",
+    "tabs": [
+      { "id": "createstuff:create_stuff_crafts", "label": "Create: Stuff & Crafts" }
+    ]
+  },
+  {
+    "name": "Create: Blahaj Factory",
+    "tabs": [
+      { "id": "create_blahaj_factory:create_blahaj_factory", "label": "Create: Blahaj Factory" }
+    ]
+  },
+  {
+    "name": "Create: Originium Industry",
+    "tabs": [
+      { "id": "create_originium_industry:main", "label": "Create: Originium Industry" }
+    ]
+  },
+  {
+    "name": "Create Cannon 2 mod",
+    "tabs": [
+      { "id": "create_cannon_mod:create_cannon_2_creative_menu", "label": "Create Cannon 2" },
+      { "id": "create_cannon_mod:create_cannon_2_food_cm", "label": "Create Cannon 2 Food" }
+    ]
+  },
+  {
+    "name": "Create Vampirism",
+    "tabs": [
+      { "id": "create_vampirism:cv_items", "label": "Create Vampirism: Cv Items" }
+    ]
+  },
+  {
+    "name": "Create: Craftable Emeralds",
+    "tabs": [
+      { "id": "create_craftable_emeralds:craftable_emeralds", "label": "Create: Craftable Emeralds" }
+    ]
+  },
+  {
+    "name": "Create: Titan",
+    "tabs": [
+      { "id": "create_titan:createtitantab", "label": "Create: Titan" }
+    ]
+  },
+  {
+    "name": "Create: Wings Plus",
+    "tabs": [
+      { "id": "createwingsplus:main_tab", "label": "Create: Wings Plus" }
+    ]
+  },
+  {
+    "name": "Create: Maintenance Control",
+    "tabs": [
+      { "id": "create_maintenance_control:main", "label": "Create: Maintenance Control" }
+    ]
+  },
+  {
+    "name": "Create: Endless Reserves",
+    "tabs": [
+      { "id": "cer:cer", "label": "Create: Endless Reserves" }
+    ]
+  },
+  {
+    "name": "Create TFMG: Renewable Resouces",
+    "tabs": [
+      { "id": "tfmgrr:tab", "label": "Create TFMG: Renewable Resouces: Tab" }
+    ]
+  },
+  {
+    "name": "Create: Chocolate Cakes",
+    "tabs": [
+      { "id": "create_chocolate_cakes:create_more_cakes", "label": "Create: Chocolate Cakes" }
+    ]
+  },
+  {
+    "name": "CBC Terminal Ballistics",
+    "tabs": [
+      { "id": "cbc_terminal_ballistics:armor", "label": "CBC Terminal Ballistics Armor" }
+    ]
+  },
+  {
+    "name": "Create:Heat",
+    "tabs": [
+      { "id": "createheat:create_heat", "label": "Create:Heat" }
+    ]
+  },
+  {
+    "name": "VS Shields",
+    "tabs": [
+      { "id": "vs_shields:vs_shields_tab", "label": "VS Shields" }
+    ]
+  },
+  {
+    "name": "Create: Redstone Additions",
+    "tabs": [
+      { "id": "create_redstone_additions:create_redstone_additions_tab", "label": "Create: Redstone Additions" }
+    ]
+  },
+  {
+    "name": "Mired",
+    "tabs": [
+      { "id": "mired:mired_tab", "label": "Mired" }
+    ]
+  },
+  {
+    "name": "Create Build Gun",
+    "tabs": [
+      { "id": "create_build_gun:create_build_gun", "label": "Create Build Gun" }
+    ]
+  },
+  {
+    "name": "Create Electrolysis",
+    "tabs": [
+      { "id": "createelectrolysis:electrolyser", "label": "Create Electrolysis: Electrolyser" },
+      { "id": "createelectrolysis:example_tab", "label": "Create Electrolysis: Example" }
+    ]
+  },
+  {
+    "name": "Create: Vault UI",
+    "tabs": [
+      { "id": "vault_ui:vault_menu", "label": "Vault UI" }
+    ]
+  },
+  {
+    "name": "Archaic chocolatier's guide to well brewed Coffee",
+    "tabs": [
+      { "id": "hotchocomod:hotchoco_tab", "label": "Archaic chocolatier's guide to well brewed Coffee: Hotchoco" }
+    ]
+  },
+  {
+    "name": "Isaac's Creative Additions",
+    "tabs": [
+      { "id": "isaacs_creative_additions:isaac_creative_additions", "label": "Isaac's Creative Additions" }
+    ]
+  },
+  {
+    "name": "Create: Handcrafted",
+    "tabs": [
+      { "id": "create_handcrafted:create_handcrafted", "label": "Create: Handcrafted" }
+    ]
+  },
+  {
+    "name": "Create: Brassworks",
+    "tabs": [
+      { "id": "create_brassworks:main", "label": "Create: Brassworks" }
+    ]
+  },
+  {
+    "name": "Umbra Poor Ores Create",
+    "tabs": [
+      { "id": "umbra_poor_ores_create:creative_tab", "label": "Umbra Poor Ores Create" }
+    ]
+  },
+  {
+    "name": "Create: Sweets 'n' Treats (Reforged)",
+    "tabs": [
+      { "id": "create_snt:create_snt", "label": "Create: Sweets 'n' Treats (Reforged)" },
+      { "id": "create_snt:extra", "label": "Create: Sweets 'n' Treats (Reforged): Extra" }
+    ]
+  },
+  {
+    "name": "Get Creative",
+    "tabs": [
+      { "id": "get_creative:get_creative", "label": "Get Creative" }
+    ]
+  },
+  {
+    "name": "C_WarpTech",
+    "tabs": [
+      { "id": "c_warptech:c_warptech_blocks", "label": "C:Warptech Main" },
+      { "id": "c_warptech:c_warptech_planet_blocks", "label": "Abydos" }
+    ]
+  },
+  {
+    "name": "Create: VS Engineering",
+    "tabs": [
+      { "id": "cvsengineering:main", "label": "CVS Engineering" }
+    ]
+  },
+  {
+    "name": "Create Panda",
+    "tabs": [
+      { "id": "createpanda:create_panda", "label": "Create Panda" }
+    ]
+  },
+  {
+    "name": "Create: Dreams",
+    "tabs": [
+      { "id": "create_dreams:create_dreams", "label": "Create:Dreams" }
+    ]
+  },
+  {
+    "name": "Resourceful Refinement",
+    "tabs": [
+      { "id": "resourceful_refinement:fluids", "label": "Resourceful Refinement Fluids" },
+      { "id": "resourceful_refinement:main", "label": "Resourceful Refinement" }
+    ]
+  },
+  {
+    "name": "Lemon_power",
+    "tabs": [
+      { "id": "lemon_power:lemonpower", "label": "Lemonpower" },
+      { "id": "lemon_power:voidtab", "label": "The Void" }
+    ]
+  },
+  {
+    "name": "Vasis create addon",
+    "tabs": [
+      { "id": "vasis_create_addon:music_discs", "label": "Create Music Discs" }
+    ]
+  },
+  {
+    "name": "Custom Discs",
+    "tabs": [
+      { "id": "customdiscs:disc_tab", "label": "Custom Discs" }
+    ]
+  },
+  {
+    "name": "Anzu´s Mod",
+    "tabs": [
+      { "id": "anzu_add:anzu_add_items", "label": "Anzu Add Items" },
+      { "id": "anzu_add:anzu_mod", "label": "Anzu Mod Dna's" },
+      { "id": "anzu_add:plants_dna", "label": "Plants Dna" }
+    ]
+  },
+  {
+    "name": "Create Domeniks Mod",
+    "tabs": [
+      { "id": "createdomeniksmod:base_tab", "label": "Create Domeniks Mod" },
+      { "id": "createdomeniksmod:building_tab", "label": "Create Domeniks Mod: Building" }
+    ]
+  },
+  {
+    "name": "MoreTraffic",
+    "tabs": [
+      { "id": "moretraffic:trafficcraft_tab", "label": "MoreTraffic" }
+    ]
+  },
+  {
+    "name": "AeroStar",
+    "tabs": [
+      { "id": "aerostarcomp:main", "label": "AeroStar" }
+    ]
+  },
+  {
+    "name": "Expanded Steam Whistles",
+    "tabs": [
+      { "id": "expanded_steam_whistles:whistle_tab", "label": "Expanded Steam Whistles" }
+    ]
+  },
+  {
+    "name": "Create: Better Stock Ticker",
+    "tabs": [
+      { "id": "betterstockticker:main", "label": "Create: Better Stock Ticker" }
+    ]
+  },
+  {
+    "name": "fizzy's silly stuff",
+    "tabs": [
+      { "id": "fizzysmod:money", "label": "Money" }
+    ]
+  },
+  {
+    "name": "Create: Stuffz",
+    "tabs": [
+      { "id": "create_stuffz:create_stuffz", "label": "Create: Stuffz" },
+      { "id": "create_stuffz:create_stuffz_blockz", "label": "Create: Stuffz: Blockz" }
+    ]
+  },
+  {
+    "name": "Create: Cluj Napoca",
+    "tabs": [
+      { "id": "create_cluj_napoca:create_cluj_napoca", "label": "Create: Cluj Napoca" }
+    ]
+  },
+  {
+    "name": "Beyondlimits",
+    "tabs": [
+      { "id": "createbeyondlimits:beyond_limits_tab", "label": "Beyondlimits" },
+      { "id": "createbeyondlimits:cheese", "label": "Beyondlimits: Cheese" },
+      { "id": "createbeyondlimits:dystheism", "label": "Beyondlimits: Dystheism" },
+      { "id": "createbeyondlimits:ingredient", "label": "Beyondlimits: Ingredient" },
+      { "id": "createbeyondlimits:kinetic", "label": "Beyondlimits: Kinetic" },
+      { "id": "createbeyondlimits:nature", "label": "Beyondlimits: Nature" },
+      { "id": "createbeyondlimits:totem", "label": "Beyondlimits: Totem" }
+    ]
+  },
+  {
+    "name": "Fancy Tab Sections",
+    "tabs": [
+      { "id": "fancytabsections:dirty_tools", "label": "Dirty Tools" },
+      { "id": "fancytabsections:shiny_things", "label": "Shiny Things" }
+    ]
+  },
+  {
+    "name": "Create: Artillery",
+    "tabs": [
+      { "id": "create_artillery:sunset_artilery", "label": "Create: artillery" }
+    ]
+  },
+  {
+    "name": "Create Plenty O' Recipes",
+    "tabs": [
+      { "id": "createplenty:example_tab", "label": "Create Plenty O' Recipes: Example" },
+      { "id": "createplenty:rose_quartz_nugget", "label": "Create Plenty O' Recipes: Rose Quartz Nugget" }
+    ]
+  },
+  {
+    "name": "Create: Oreo's",
+    "tabs": [
+      { "id": "create_oreos:create_oreos", "label": "Create Oreos" }
+    ]
+  },
+  {
+    "name": "Create: pickled",
+    "tabs": [
+      { "id": "create_pickled_forge:createpickled", "label": "Create: Pickled" }
+    ]
+  },
+  {
+    "name": "Create_TFC_Unofficial Port",
+    "tabs": [
+      { "id": "create_tfc_unofficial_port:createtfcunofficialport", "label": "Create TFC Unofficial Port" }
+    ]
+  },
+  {
+    "name": "Create: Relics",
+    "tabs": [
+      { "id": "createrelics:createrelics", "label": "сreate:relics integration" }
+    ]
+  },
+  {
+    "name": "Create Modern Warfare (slrw1.0)",
+    "tabs": [
+      { "id": "createarms:createarms_tab", "label": "Create: Arms" }
+    ]
+  },
+  {
+    "name": "Create: Thermantics",
+    "tabs": [
+      { "id": "thermantics:thermantics_tab", "label": "Create: Thermantics" }
+    ]
+  },
+  {
+    "name": "Wooden Cog Solid",
+    "tabs": [
+      { "id": "wooden_cog_solid:metal_cog_solid", "label": "Wooden Cog Solid" }
+    ]
+  },
+  {
+    "name": "Create: Relics plus",
+    "tabs": [
+      { "id": "createrelicsplus:cogwheel_heart", "label": "Create: Relics plus: Cogwheel Heart" },
+      { "id": "createrelicsplus:example_tab", "label": "Create: Relics plus: Example" }
+    ]
+  },
+  {
+    "name": "FoxysMod",
+    "tabs": [
+      { "id": "foxysmod:foxysmod_tab", "label": "FoxysMod Items" }
+    ]
+  },
+  {
+    "name": "Create: Diagram",
+    "tabs": [
+      { "id": "creatediagram:diagram", "label": "Create: Diagram" }
+    ]
+  },
+  {
+    "name": "Create: Tilting Control",
+    "tabs": [
+      { "id": "create_tilting_control:main", "label": "Create: Tilting Control" }
+    ]
+  },
+  {
+    "name": "Advanced Schematic Cannon",
+    "tabs": [
+      { "id": "advancedschematicannon:main", "label": "Advanced Schematic Cannon" }
+    ]
+  },
+  {
+    "name": "CreateMR",
+    "tabs": [
+      { "id": "createmr:createmr", "label": "CreateMR" }
+    ]
+  },
+  {
+    "name": "Create: Commerce",
+    "tabs": [
+      { "id": "create_commerce:main", "label": "Create: Commerce" }
+    ]
+  },
+  {
+    "name": "Create Nuclear Industrys",
+    "tabs": [
+      { "id": "createnuclearindustrys:example_tab", "label": "Create Nuclear Industrys: Example" },
+      { "id": "createnuclearindustrys:heat_gauge", "label": "Create Nuclear Industrys: Heat Gauge" },
+      { "id": "createnuclearindustrys:thermal_generator", "label": "Create Nuclear Industrys: Thermal Generator" }
+    ]
+  },
+  {
+    "name": "Create Geology",
+    "tabs": [
+      { "id": "create_geology:c_gmetals", "label": "CG Metals" },
+      { "id": "create_geology:c_gmineralsandores", "label": "CG Minerals and Ores" },
+      { "id": "create_geology:cg_liquids_and_gases", "label": "CG Liquids And Gases" },
+      { "id": "create_geology:create_geology", "label": "Create Geology" },
+      { "id": "create_geology:decorative_blocks", "label": "Decorative Blocks" },
+      { "id": "create_geology:powders", "label": "CG Powders" }
+    ]
+  },
+  {
+    "name": "CCA-CNA Compat",
+    "tabs": [
+      { "id": "ccacnacompat:main", "label": "CCA-CNA Compat" }
+    ]
+  },
+  {
+    "name": "Create: Pineapples",
+    "tabs": [
+      { "id": "create_pineapples:create_pineapples_tab", "label": "Create: Pineapples" }
+    ]
+  },
+  {
+    "name": "Create: Versatile Gearbox",
+    "tabs": [
+      { "id": "create_versatile_gearbox:versatile_gearbox_tab", "label": "Versatile Gearbox" }
+    ]
+  },
+  {
+    "name": "Petrochem",
+    "tabs": [
+      { "id": "petrochem:ingredients", "label": "Create Petrochem's Ingredients" },
+      { "id": "petrochem:main", "label": "Create Petrochem's Blocks" }
+    ]
+  },
+  {
+    "name": "Luncheon",
+    "tabs": [
+      { "id": "luncheon:base", "label": "Luncheon" }
+    ]
+  },
+  {
+    "name": "Create: SomeTricks",
+    "tabs": [
+      { "id": "sometricks:some_tricks", "label": "Some Tricks" }
+    ]
+  },
+  {
+    "name": "Create: Lemon Mates",
+    "tabs": [
+      { "id": "lemonmates:base", "label": "Lemonmates" },
+      { "id": "lemonmates:processing", "label": "Lemonmates Processing" },
+      { "id": "lemonmates:serving", "label": "Lemonmates Serving" }
+    ]
+  },
+  {
+    "name": "Create: Chromatic Legacy",
+    "tabs": [
+      { "id": "create_chromatic_legacy:create_chromatic_legacy_creative_tab", "label": "Create: Chromatic Legacy" }
+    ]
+  },
+  {
+    "name": "Create: Stone Generator",
+    "tabs": [
+      { "id": "createstonegenerator:create_stone_generator", "label": "Create: Stone Generator" }
+    ]
+  },
+  {
+    "name": "Create: AdsDrills & Ore Nodes",
+    "tabs": [
+      { "id": "adsdrill:base_tab", "label": "Create: AdsDrills & Ore Nodes" }
+    ]
+  },
+  {
+    "name": "Create: Melatonin",
+    "tabs": [
+      { "id": "catears:melatonin", "label": "Melatonin" }
+    ]
+  },
+  {
+    "name": "Create Mobbed",
+    "tabs": [
+      { "id": "create_mobbed:create_mobbed", "label": "Create Mobbed" }
+    ]
+  },
+  {
+    "name": "Create:XP Tool",
+    "tabs": [
+      { "id": "xptool:xp_tool_tab", "label": "XP Tools" }
+    ]
+  },
+  {
+    "name": "Create: Beretium",
+    "tabs": [
+      { "id": "create_beretium:beretium_createee", "label": "Create: Beretium" },
+      { "id": "create_beretium:create_beretium_building_blocks", "label": "Create: Beretium's Building Blocks" }
+    ]
+  },
+  {
+    "name": "Create: Alchemy",
+    "tabs": [
+      { "id": "createalchemy:create_alchemy_blocks", "label": "Create Alchemy Blocks" }
+    ]
+  },
+  {
+    "name": "Refined Schematics",
+    "tabs": [
+      { "id": "refinedschematics:refined_energistics_tab", "label": "Refined Schematics: Refined Energistics" }
+    ]
+  },
+  {
+    "name": "Create: Alloys",
+    "tabs": [
+      { "id": "create_alloys:create_alloys", "label": "Create: Alloys" }
+    ]
+  },
+  {
+    "name": "Create: Canvas Contraptions",
+    "tabs": [
+      { "id": "canvascontraptions:main", "label": "Create: Canvas Contraptions" }
+    ]
+  },
+  {
+    "name": "Create: Var Tag",
+    "tabs": [
+      { "id": "create_var_tag:var_tag", "label": "Create: Var Tag" },
+      { "id": "create_var_tag:var_tag_tab", "label": "Create: Var Tag: Var Tag" }
+    ]
+  },
+  {
+    "name": "Create: Abuti",
+    "tabs": [
+      { "id": "create_abuti:create_abuti", "label": "Create: Abuti" }
+    ]
+  },
+  {
+    "name": "Worldspawn",
+    "tabs": [
+      { "id": "worldspawn:worldspawn_tab", "label": "WorldSpawn" }
+    ]
+  },
+  {
+    "name": "Create SU Mod",
+    "tabs": [
+      { "id": "createsumod:create_su_tab", "label": "Create SU Mod" },
+      { "id": "createsumod:fe_generator", "label": "Create SU Mod: Fe Generator" }
+    ]
+  },
+  {
+    "name": "Nodewire",
+    "tabs": [
+      { "id": "nodewire:logic_block", "label": "Nodewire: Logic Block" },
+      { "id": "nodewire:nodewire", "label": "Nodewire" }
+    ]
+  },
+  {
+    "name": "Neo_Create_Fanta",
+    "tabs": [
+      { "id": "neo_create_fanta:create_fanta", "label": "Create: Fanta" }
+    ]
+  },
+  {
+    "name": "Create: Smoothiez",
+    "tabs": [
+      { "id": "create_smoothiez:create_smoothiez", "label": "Create: Smoothiez" }
+    ]
+  },
+  {
+    "name": "Create: Automation Expansion",
+    "tabs": [
+      { "id": "automationexpansion:automation_expansion", "label": "Create: Automation Expansion" }
+    ]
+  },
+  {
+    "name": "Create: ChocoPaste",
+    "tabs": [
+      { "id": "create_chocopaste:create_choco_paste", "label": "Create Choco Paste" }
+    ]
+  },
+  {
+    "name": "Info Display",
+    "tabs": [
+      { "id": "vaultdisplay:vault_display_tab", "label": "Info Display" }
+    ]
+  },
+  {
+    "name": "Create: Colored Controllers",
+    "tabs": [
+      { "id": "createcoloredcontrollers:colored_controllers_tab", "label": "Colored Linked Controllers" }
+    ]
+  },
+  {
+    "name": "Create Mob Grinding",
+    "tabs": [
+      { "id": "createmobgrinding:kinetic_spawning_tab", "label": "Create: Mob Grinding" }
+    ]
+  },
+  {
+    "name": "Carolina's Tweaks",
+    "tabs": [
+      { "id": "carolinas_tweaks:carolinas_tweaks_tab", "label": "Carolina's Tweaks" }
+    ]
+  },
+  {
+    "name": "Create Aeronautics: Car Works",
+    "tabs": [
+      { "id": "createaeronauticscarworks:carworks_tab", "label": "Create Aeronautics: Car Works" }
+    ]
+  },
+  {
+    "name": "Create: Easier Sheets",
+    "tabs": [
+      { "id": "createeasiersheets:easier_sheets_tab", "label": "Create: Easier Sheets" }
+    ]
+  },
+  {
+    "name": "Create Twistermill",
+    "tabs": [
+      { "id": "twistermill:create_twistermill_tab", "label": "Create Twistermill" }
+    ]
+  },
+  {
+    "name": "Create: Hammer & Bid",
+    "tabs": [
+      { "id": "create_hammer_bid:main_tab", "label": "Create: Hammer & Bid" }
+    ]
+  },
+  {
+    "name": "Create: Smoke Stacks Lite",
+    "tabs": [
+      { "id": "createsmokestacks:steam_plume", "label": "Create: Smoke Stacks Lite: Steam Plume" },
+      { "id": "createsmokestacks:tall_steam_plume", "label": "Create: Smoke Stacks Lite: Tall Steam Plume" }
+    ]
+  },
+  {
+    "name": "Create: Smart Logistics",
+    "tabs": [
+      { "id": "smartlogistics:main", "label": "Create: Smart Logistics" }
+    ]
+  },
+  {
+    "name": "Create: Hydraulics",
+    "tabs": [
+      { "id": "createhydraulics:main", "label": "Create: Hydraulics" }
+    ]
+  },
+  {
+    "name": "Create: CABIN crafts",
+    "tabs": [
+      { "id": "create_cabin_crafts:components_and_machines_tab", "label": "Create: CABIN crafts: Components And Machines" }
+    ]
+  },
+  {
+    "name": "Create More Control",
+    "tabs": [
+      { "id": "createmorecontrol:create_more_control", "label": "Create: More Control" }
+    ]
+  },
+  {
+    "name": "Create: Airburst",
+    "tabs": [
+      { "id": "airburst:airburst", "label": "Create: Airburst" }
+    ]
+  },
+  {
+    "name": "Create: Electro Extras",
+    "tabs": [
+      { "id": "electroextras:base", "label": "Create: Electro Extras" }
+    ]
+  },
+  {
+    "name": "Create: Quarry",
+    "tabs": [
+      { "id": "create_quarry:main", "label": "Create: Quarry" }
+    ]
+  },
+  {
+    "name": "Create Void Tank",
+    "tabs": [
+      { "id": "createvoidtank:main", "label": "Create Void Tank" }
+    ]
+  }
+]

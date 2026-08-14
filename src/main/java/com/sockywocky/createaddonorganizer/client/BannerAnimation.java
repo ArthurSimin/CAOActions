@@ -16,6 +16,7 @@ import net.minecraft.server.packs.resources.Resource;
 
 public final class BannerAnimation {
     private static final int DEFAULT_AUTO_FRAME_TICKS = 2;
+    private static final int RESYNC_AFTER_FRAMES = 4;
 
     private static final Map<ResourceLocation, Optional<AnimInfo>> CACHE = new HashMap<>();
     private static final Map<ResourceLocation, Integer> FRAME_COUNT_CACHE = new HashMap<>();
@@ -23,7 +24,11 @@ public final class BannerAnimation {
 
     private BannerAnimation() {}
 
-    public record AnimInfo(int frameCount, int frameTicks, boolean cycles) {}
+    public record AnimInfo(int frameCount, int frameTicks, boolean cycles, boolean hoverOnly) {
+        public AnimInfo(int frameCount, int frameTicks, boolean cycles) {
+            this(frameCount, frameTicks, cycles, true);
+        }
+    }
 
     private static final class FrameState {
         int frame;
@@ -39,6 +44,10 @@ public final class BannerAnimation {
         return count > 1 ? Optional.of(new AnimInfo(count, Math.max(1, frameTicks), animated)) : Optional.empty();
     }
 
+    public static int sheetHeight(ResourceLocation texture) {
+        return frameCount(texture) * BannerTextures.HEIGHT;
+    }
+
     public static void invalidate(ResourceLocation texture) {
         CACHE.remove(texture);
         FRAME_STATE.remove(texture);
@@ -50,23 +59,25 @@ public final class BannerAnimation {
             return 0;
         }
         FrameState state = FRAME_STATE.computeIfAbsent(texture, t -> new FrameState());
-        if (!hovered) {
-            state.lastAdvanceMillis = 0L;
-            return state.frame;
+        if (hovered || !info.hoverOnly()) {
+            advance(state, info);
         }
+        return state.frame;
+    }
+
+    private static void advance(FrameState state, AnimInfo info) {
         long now = System.currentTimeMillis();
-        if (state.lastAdvanceMillis == 0L) {
-            state.lastAdvanceMillis = now;
-            return state.frame;
-        }
         long frameDurationMillis = info.frameTicks() * 50L;
         long elapsed = now - state.lastAdvanceMillis;
+        if (state.lastAdvanceMillis == 0L || elapsed > frameDurationMillis * RESYNC_AFTER_FRAMES) {
+            state.lastAdvanceMillis = now;
+            return;
+        }
         if (elapsed >= frameDurationMillis) {
             long steps = elapsed / frameDurationMillis;
             state.frame = (int) ((state.frame + steps) % info.frameCount());
             state.lastAdvanceMillis += steps * frameDurationMillis;
         }
-        return state.frame;
     }
 
     public static boolean isHovering(int x, int y, int width, int height, double mouseX, double mouseY) {
@@ -82,15 +93,16 @@ public final class BannerAnimation {
         if (count <= 1) {
             return Optional.empty();
         }
+        boolean hoverOnly = !Config.bannerAlwaysAnimates(texture);
         Integer declared = Config.animatedFrameTicks(texture);
         if (declared != null) {
-            return Optional.of(new AnimInfo(count, Math.max(1, declared), true));
+            return Optional.of(new AnimInfo(count, Math.max(1, declared), true, hoverOnly));
         }
         Optional<Integer> mcmetaTicks = mcmetaFrameTicks(texture);
         if (mcmetaTicks.isPresent()) {
-            return Optional.of(new AnimInfo(count, mcmetaTicks.get(), true));
+            return Optional.of(new AnimInfo(count, mcmetaTicks.get(), true, hoverOnly));
         }
-        return Optional.of(new AnimInfo(count, DEFAULT_AUTO_FRAME_TICKS, true));
+        return Optional.of(new AnimInfo(count, DEFAULT_AUTO_FRAME_TICKS, true, hoverOnly));
     }
 
     private static int frameCount(ResourceLocation texture) {
@@ -128,3 +140,4 @@ public final class BannerAnimation {
         }
     }
 }
+

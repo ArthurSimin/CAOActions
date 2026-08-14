@@ -1,0 +1,11 @@
+{
+  "ui.denied": {
+    "subtitle": "createaddonorganizer.subtitle.denied",
+    "sounds": [
+      {
+        "name": "createaddonorganizer:ui/denied",
+        "stream": false
+      }
+    ]
+  }
+}

@@ -25,7 +25,6 @@ import com.google.gson.GsonBuilder;
 import com.sockywocky.createaddonorganizer.Config;
 import com.sockywocky.createaddonorganizer.SectionCatalog;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
-import com.sockywocky.createaddonorganizer.createaddonorganizerClient;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
@@ -134,10 +133,7 @@ public final class Presets {
     }
 
     public static void applyLive() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null) {
-            createaddonorganizer.reapplyAbsorption(createaddonorganizerClient.currentDisplayParams(mc));
-        }
+        createaddonorganizer.reapplyAbsorption(ClientRegistries.displayParams());
         List<SectionCatalog.Entry> entries = SectionCatalog.colorables();
         Map<ResourceLocation, String> namesById = new HashMap<>();
         for (SectionCatalog.Entry entry : entries) {
@@ -164,15 +160,13 @@ public final class Presets {
                 applyOrderedGroup(currentParent, group, namesById);
                 currentParent = entry.id();
                 group = new ArrayList<>();
-            } else if (!entry.readOnly()) {
+            } else if (!entry.readOnly() && !entry.tabOwned()) {
                 group.add(entry.id());
             }
         }
         applyOrderedGroup(currentParent, group, namesById);
 
-        if (mc.level != null && mc.player != null) {
-            createaddonorganizer.refreshTabLayout(createaddonorganizerClient.currentDisplayParams(mc));
-        }
+        createaddonorganizer.refreshTabLayout(ClientRegistries.displayParams());
     }
 
     private static void applyOrderedGroup(ResourceLocation parent, List<ResourceLocation> group,

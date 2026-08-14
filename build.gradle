@@ -56,6 +56,10 @@ neoForge {
             client()
 
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+
+            if (project.hasProperty('quickPlay')) {
+                programArguments.addAll '--quickPlaySingleplayer', project.property('quickPlay').toString()
+            }
         }
 
         server {
@@ -120,6 +124,29 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 }
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
+
+var langVariants = [
+        es_es: ['es_ar', 'es_cl', 'es_ec', 'es_mx', 'es_uy', 'es_ve'],
+        fr_fr: ['fr_ca'],
+]
+
+var langVariantDir = "build/generated/sources/langVariants"
+
+var generateLangVariants = tasks.register("generateLangVariants", Copy) {
+    var langDir = "src/main/resources/assets/${mod_id}/lang"
+    into "${langVariantDir}/assets/${mod_id}/lang"
+    langVariants.each { source, copies ->
+        copies.each { copy ->
+            from(langDir) {
+                include "${source}.json"
+                rename { "${copy}.json" }
+            }
+        }
+    }
+}
+sourceSets.main.resources.srcDir langVariantDir
+tasks.named('processResources').configure { dependsOn generateLangVariants }
+neoForge.ideSyncTask generateLangVariants
 
 publishing {
     publications {

@@ -1,10 +1,14 @@
 package com.sockywocky.createaddonorganizer.client;
 
+import com.sockywocky.createaddonorganizer.Config;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+
+import org.lwjgl.glfw.GLFW;
 
 public class DevCodeScreen extends Screen {
     private final Screen parent;
@@ -18,18 +22,24 @@ public class DevCodeScreen extends Screen {
 
     @Override
     protected void init() {
-        codeBox = new EditBox(this.font, this.width / 2 - 100, this.height / 2 - 24, 200, 20, Component.empty());
+        int panelW = MenuLayout.panelWidth(this.width);
+        int panelX = MenuLayout.panelX(this.width);
+        int boxY = this.height / 2 - 24;
+
+        codeBox = new EditBox(this.font, panelX, boxY, panelW, MenuLayout.ROW_H, Component.empty());
         codeBox.setMaxLength(32);
         codeBox.setFilter(s -> s.chars().allMatch(Character::isLetterOrDigit));
         codeBox.setResponder(s -> okButton.active = !s.isEmpty());
         addRenderableWidget(codeBox);
         setInitialFocus(codeBox);
 
+        int buttonY = MenuLayout.nextRow(boxY);
+        int half = MenuLayout.split(panelW, 2);
         okButton = addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.ok"), b -> confirm())
-                .bounds(this.width / 2 - 102, this.height / 2 + 4, 100, 20).build());
+                .bounds(panelX, buttonY, half, MenuLayout.ROW_H).build());
         okButton.active = false;
         addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.cancel"), b -> onClose())
-                .bounds(this.width / 2 + 2, this.height / 2 + 4, 100, 20).build());
+                .bounds(MenuLayout.splitX(panelX, panelW, 2, 1), buttonY, half, MenuLayout.ROW_H).build());
     }
 
     private void confirm() {
@@ -44,8 +54,19 @@ public class DevCodeScreen extends Screen {
             this.minecraft.setScreen(parent);
             Notice.show(Component.translatable("createaddonorganizer.devmode.activated"), Notice.GREEN);
         } else {
-            this.minecraft.stop();
+            codeBox.setValue("");
+            okButton.active = false;
+            Notice.show(Component.translatable("createaddonorganizer.devmode.wrongCode"), Notice.RED);
         }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if ((keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) && okButton.active) {
+            confirm();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -71,6 +92,6 @@ public class DevCodeScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(parent);
+        ScreenSwoosh.surface(() -> parent, Config.SWOOSH_BACK);
     }
 }

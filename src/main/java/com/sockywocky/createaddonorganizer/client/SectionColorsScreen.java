@@ -5,21 +5,28 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.UnaryOperator;
 
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.sockywocky.createaddonorganizer.AbsorbedTabs;
 import com.sockywocky.createaddonorganizer.Config;
+import com.sockywocky.createaddonorganizer.PackDefaults;
 import com.sockywocky.createaddonorganizer.SectionCatalog;
+import com.sockywocky.createaddonorganizer.TabLayout;
+import com.sockywocky.createaddonorganizer.TabLayoutStore;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
-import com.sockywocky.createaddonorganizer.createaddonorganizerClient;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.EditBox;
@@ -35,33 +42,46 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.fml.loading.FMLPaths;
 
 public class SectionColorsScreen extends Screen {
 
-    private static final long FADE_MS = 300;
-    private static final long TITLE_SLIDE_MS = 500;
-    private static final long HINT_DELAY_MS = 300;
+    private static final int OUTER = 6;
+    private static final int PANEL_GAP = 6;
+    private static final int SEARCH_H = 18;
+    private static final int SEARCH_MAX_W = 260;
+    private static final int HELP_SIZE = 12;
+    private static final int LIST_PAD = 8;
+    private static final int INFO_PAD = 8;
 
-    private static final long[] BUTTON_DELAYS = {380, 500, 620, 740, 980, 1100, 1220, 1340, 1340, 1340, 1340, 1340};
+    private static final int SIDE_GUTTER = 26;
 
-    private static final int SIDEBAR_MIN_W = 150;
-    private static final int MARGIN = 8;
+    private static final float HEADER_TONE = 0.28f;
+
+    private static final String[] TIP_KEYS = {
+            "createaddonorganizer.colors.tip.select",
+            "createaddonorganizer.colors.tip.restyle",
+            "createaddonorganizer.colors.tip.reorder",
+            "createaddonorganizer.colors.tip.rename",
+            "createaddonorganizer.colors.tip.delete",
+    };
+    private static final int TIP_BASE = 0xFF8A9AA8;
+    private static final long TIP_FADE_MS = 450;
+    private static final long TIP_HOLD_MS = 3200;
+    private static final long TIP_STEP_MS = TIP_FADE_MS * 2 + TIP_HOLD_MS;
+
+    private static final int POPUP_PAD = 4;
+    private static final int POPUP_W = BannerTextures.WIDTH + POPUP_PAD * 2;
+    private static final int POPUP_H = BannerTextures.HEIGHT + POPUP_PAD * 2 + 22;
+
     private static final long DOUBLE_CLICK_MS = 300;
-    private static final long DIVIDER_DELAY_MS = 700;
-    private static final long ROWS_DELAY_MS = 750;
-    private static final long ROW_STAGGER_MS = 45;
-
-    private static final int ROW_STAGGER_CAP = 12;
-    private static final long ANIM_TOTAL_MS = 1500;
-
-    private static final long GLINT_PERIOD_MS = 5000;
-    private static final long GLINT_SWEEP_MS = 650;
-    private static final int GLINT_COLOR = 0x00FFFFFF;
-    private static final float GLINT_MAX_ALPHA = 0.9f;
-    private static final float GLINT_HALO_ALPHA = 0.22f;
-
-    private static final float GLINT_SLANT = 6f;
+    private static final int CLASSIC_LIST_PADDING = 16;
+    private static final int CLASSIC_PANEL_W = 400;
+    private static final int CLASSIC_ROW_1 = 64;
+    private static final int CLASSIC_BUTTON_H = 18;
+    private static final int BUTTON_FACE_TOP = 2;
+    private static final int BUTTON_FACE_BOTTOM = 3;
+    private static final int CLASSIC_GAP = 4;
 
     private static final String UNDERTALE_LINE = "But Nobody Came.";
     private static final String KONAMI_LINE = "DONT put in the konami code";
@@ -84,19 +104,15 @@ public class SectionColorsScreen extends Screen {
     private final Screen parent;
     private final ModContainer container;
 
-    // Stamped at the end of the FIRST init() rather than at construction: if building the row list
-    // (SectionCatalog.colorables() etc.) is slow, capturing this before that work would let the entrance
-    // animations' delay windows already be "elapsed" by the first render, skipping straight to the
-    // finished state instead of animating. rebuildWidgets() re-invokes init() without re-arming this,
-    // so a mid-session rebuild (e.g. from dragging a row) still doesn't replay the entrance animation.
-    private long openedMillis = System.currentTimeMillis();
-    private boolean animationArmed;
     private final String emptyStateText = EMPTY_STATE_LINES[new Random().nextInt(EMPTY_STATE_LINES.length)];
 
     private ColorList list;
-    private Button saveButton;
-    private final List<Button> fadingButtons = new ArrayList<>();
     private boolean orderDirty;
+
+    private static final long PRIME_BUDGET_NANOS = 10_000_000L;
+    private boolean priming;
+    private boolean primeWorkDone;
+    private long primeStart;
     private List<SectionCatalog.Entry> pendingOrder;
     private boolean noSections;
     private int listAreaTop;
@@ -121,14 +137,30 @@ public class SectionColorsScreen extends Screen {
     private ResourceLocation selectedId;
     private SectionCatalog.Entry selectedEntry;
     private List<SectionCatalog.Entry> allEntries = List.of();
-    private Component countLine = Component.empty();
-    private Button panelEdit;
+    private int tipIndex;
+    private long tipStart = System.currentTimeMillis();
+    private int tipLeft;
+    private int tipRight;
+    private GlassSidebar sidebar;
+    private final InfoPane infoPane = new InfoPane(this);
+    private InfoPane.Kind infoPage;
+    private Screen pane;
+    private ColorPickerScreen editor;
     private int sidebarX;
     private int sidebarW;
-    private int selPreviewY;
-    private int selContextY;
-    private int sectionLabelY;
-    private int resetLabelY;
+    private int contentX;
+    private int contentW;
+    private int panelTop;
+    private int panelBottom;
+    private int searchX;
+    private int searchY;
+    private int searchW;
+    private int helpX;
+    private final GlassArrow leftArrow = new GlassArrow();
+    private final GlassArrow rightArrow = new GlassArrow();
+    private final GlassArrow backArrow = new GlassArrow();
+    private long frameNanos;
+    private SectionCatalog.Entry popupEntry;
     private ResourceLocation lastClickId;
     private long lastClickMillis;
 
@@ -142,75 +174,119 @@ public class SectionColorsScreen extends Screen {
 
     @Override
     protected void init() {
-        fadingButtons.clear();
+        if (ClientRegistries.needsPriming() && !priming) {
+            priming = true;
+            primeWorkDone = false;
+            primeStart = System.currentTimeMillis();
+        }
         searchBox = null;
-        panelEdit = null;
         classic = Config.classicOrganizerLayout();
         if (classic) {
-            searchQuery = "";
+            infoPage = null;
+            pane = null;
+        }
+        if (pane != null) {
+            layoutPanels();
+            buildSidebar();
+            ((EmbeddedPane) pane).embedInto(contentX, panelTop, contentW, panelBottom - panelTop, this::closePane);
+            ((EmbeddedPane) pane).onEmbeddedChanged(this::sectionsChanged);
+            pane.init(this.minecraft, this.width, this.height);
+            return;
+        }
+        if (editor != null) {
+            if (classic) {
+                editor = null;
+            } else {
+                layoutPanels();
+                buildSidebar();
+                editor.embedInto(contentX, panelTop, contentW, panelBottom - panelTop, this::closeEditor);
+                editor.init(this.minecraft, this.width, this.height);
+                return;
+            }
         }
         double restoreScroll = list != null ? list.getScrollAmount() : lastScroll;
 
         int listTop;
         int listBottom;
         if (classic) {
-            listRowWidth = 320;
+            int panelW = Math.min(CLASSIC_PANEL_W, this.width - 60);
+            int panelX = (this.width - panelW) / 2;
+            int quarter = (panelW - CLASSIC_GAP * 3) / 4;
+            listRowWidth = panelW - CLASSIC_LIST_PADDING * 2;
             listCenterX = this.width / 2;
-            if (DevMode.isUnlocked()) {
-                fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.addSection"),
-                                b -> this.minecraft.setScreen(new AddSectionScreen(this)))
-                        .bounds(this.width / 2 - 146, 64, 140, 20).build()));
-                addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.assignBanners"),
-                                b -> this.minecraft.setScreen(new BannerAssignmentScreen(this)))
-                        .bounds(this.width / 2 + 6, 64, 140, 20).build());
-            } else {
-                fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.addSection"),
-                                b -> this.minecraft.setScreen(new AddSectionScreen(this)))
-                        .bounds(this.width / 2 - 100, 64, 200, 20).build()));
-            }
-            fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetOrder"),
+
+            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.addSection"),
+                            b -> ScreenSwoosh.drill(() -> new AddSectionScreen(this), Config.SWOOSH_ADD_SECTION))
+                    .bounds(panelX, CLASSIC_ROW_1, quarter, CLASSIC_BUTTON_H).build());
+            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets"),
+                            b -> ScreenSwoosh.drill(() -> new PresetsScreen(this), Config.SWOOSH_PRESETS))
+                    .bounds(panelX + quarter + CLASSIC_GAP, CLASSIC_ROW_1, quarter, CLASSIC_BUTTON_H).build());
+            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetOrder"),
                             b -> resetOrder())
-                    .bounds(this.width / 2 - 154, 88, 92, 20).build()));
-            fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetAll"),
+                    .bounds(panelX + (quarter + CLASSIC_GAP) * 2, CLASSIC_ROW_1, quarter, CLASSIC_BUTTON_H).build());
+            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetAll"),
                             b -> confirmResetAll())
-                    .bounds(this.width / 2 - 58, 88, 116, 20).build()));
-            fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets"),
-                            b -> this.minecraft.setScreen(new PresetsScreen(this)))
-                    .bounds(this.width / 2 + 62, 88, 92, 20).build()));
-            listTop = 116;
-            listBottom = this.height - 40;
+                    .bounds(panelX + panelW - quarter, CLASSIC_ROW_1, quarter, CLASSIC_BUTTON_H).build());
+            listTop = CLASSIC_ROW_1 + CLASSIC_BUTTON_H + 4;
+            if (PackDefaults.isActive()) {
+                addRenderableWidget(Button.builder(
+                                Component.translatable("createaddonorganizer.colors.resetPack"),
+                                b -> confirmResetToPack())
+                        .bounds(panelX, listTop, panelW, CLASSIC_BUTTON_H)
+                        .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.resetPack.tooltip")))
+                        .build());
+                listTop += CLASSIC_BUTTON_H + 4;
+            }
+            if (DevMode.isUnlocked()) {
+                addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.assignBanners"),
+                                b -> ScreenSwoosh.drill(() -> new BannerAssignmentScreen(this), Config.SWOOSH_BANNER_EDITOR))
+                        .bounds(panelX, listTop, panelW, CLASSIC_BUTTON_H).build());
+                listTop += CLASSIC_BUTTON_H + 4;
+            }
+            buildSearchBox(panelX, listTop, panelW, CLASSIC_BUTTON_H);
+            listTop += CLASSIC_BUTTON_H + 4;
+            listBottom = this.height - CLASSIC_BUTTON_H * 2 - 14;
         } else {
-            sidebarW = Math.max(SIDEBAR_MIN_W, this.width / 3);
-            sidebarX = this.width - MARGIN - sidebarW;
-            listRowWidth = this.width - sidebarW - MARGIN * 3 - 24;
-            listCenterX = MARGIN + listRowWidth / 2;
+            layoutPanels();
 
-            buildSearchBox(MARGIN, 56, listRowWidth, 18);
-            listTop = 90;
-            listBottom = this.height - 12;
+            listTop = panelTop + SEARCH_H + 12;
+            listBottom = panelBottom - 4;
 
-            initSidebar(listTop);
+            if (infoPage == null) {
+                searchX = contentX + LIST_PAD;
+                searchY = panelTop + 6;
+                helpX = contentX + contentW - LIST_PAD - HELP_SIZE;
+                searchW = Math.max(60, Math.min(SEARCH_MAX_W, contentW - LIST_PAD * 3 - HELP_SIZE - 60));
+                buildSearchBox(searchX, searchY, searchW, SEARCH_H);
+            } else {
+                infoPane.setBounds(contentX, panelTop + INFO_PAD, contentW,
+                        panelBottom - panelTop - INFO_PAD * 2);
+                infoPane.build(infoPage, this.font);
+            }
+
+            buildSidebar();
         }
         listAreaTop = listTop;
         listAreaBottom = listBottom;
 
         if (classic) {
-            list = new ColorList(this.minecraft, this.width, listBottom - listTop, listTop, 24);
-        } else {
-            int listW = listRowWidth + 40;
+            int listW = Math.min(this.width, listRowWidth + CLASSIC_LIST_PADDING * 2);
             list = new ColorList(this.minecraft, listW, listBottom - listTop, listTop, 24);
-            list.setX(MARGIN - 2 - (listW - listRowWidth) / 2);
+            list.setX((this.width - listW) / 2);
+        } else {
+            int listW = contentW - 2;
+            list = new ColorList(this.minecraft, listW, listBottom - listTop, listTop, 24);
+            list.setX(contentX + 1);
         }
 
         List<SectionCatalog.Entry> source = orderDirty && pendingOrder != null ? pendingOrder : SectionCatalog.colorables();
         allEntries = new ArrayList<>(source);
         noSections = allEntries.isEmpty();
-        for (SectionCatalog.Entry entry : filterEntries(allEntries, searchQuery)) {
-            list.add(entry);
+        list.setEntries(filterEntries(allEntries, searchQuery));
+        if (infoPage == null) {
+            addRenderableWidget(list);
         }
-        addRenderableWidget(list);
         list.setScrollAmount(restoreScroll);
-        updateCountLine();
 
         selectedEntry = null;
         if (selectedId != null) {
@@ -227,80 +303,24 @@ public class SectionColorsScreen extends Screen {
         }
 
         if (classic) {
-            int footerY = this.height - 30;
-            fadingButtons.add(addRenderableWidget(new HeartButton(this.width / 2 - 161, footerY, 20,
-                    b -> this.minecraft.setScreen(new CreditsScreen(this)))));
-            fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.allSettings"),
-                            b -> this.minecraft.setScreen(new ConfigurationScreen(container, this)))
-                    .bounds(this.width / 2 - 137, footerY, 106, 20).build()));
-            saveButton = addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.save"),
+            int panelW = Math.min(CLASSIC_PANEL_W, this.width - 60);
+            int panelX = (this.width - panelW) / 2;
+            int pairW = (panelW - CLASSIC_BUTTON_H * 2 - CLASSIC_GAP * 3) / 2;
+            int footerY = this.height - CLASSIC_BUTTON_H * 2 - 8;
+            addRenderableWidget(new HeartButton(panelX, footerY, CLASSIC_BUTTON_H,
+                    b -> ScreenSwoosh.drill(() -> new CreditsScreen(this), Config.SWOOSH_CREDITS)));
+            addRenderableWidget(new BugButton(panelX + CLASSIC_BUTTON_H + CLASSIC_GAP, footerY,
+                    CLASSIC_BUTTON_H, b -> ScreenSwoosh.drill(() -> new BugReportScreen(this), Config.SWOOSH_CREDITS)));
+            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.style"),
+                            b -> ScreenSwoosh.drill(() -> new MenuStyleScreen(this), Config.SWOOSH_MENU_STYLE))
+                    .bounds(panelX + (CLASSIC_BUTTON_H + CLASSIC_GAP) * 2, footerY, pairW, CLASSIC_BUTTON_H).build());
+            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.save"),
                             b -> saveOrder())
-                    .bounds(this.width / 2 - 25, footerY, 90, 20).build());
-            fadingButtons.add(saveButton);
-            fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-                    .bounds(this.width / 2 + 71, footerY, 90, 20).build()));
+                    .bounds(panelX + panelW - pairW, footerY, pairW, CLASSIC_BUTTON_H).build());
+                addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
+                    .bounds(panelX, this.height - CLASSIC_BUTTON_H - 4, panelW, CLASSIC_BUTTON_H).build());
         }
 
-        if (!animationArmed) {
-            animationArmed = true;
-            openedMillis = System.currentTimeMillis();
-        }
-    }
-
-    private void initSidebar(int listTop) {
-        int pairW = sidebarW / 2 - 2;
-        int pairRightX = sidebarX + sidebarW - pairW;
-        int y = listTop;
-        selPreviewY = y;
-        y += BannerTextures.HEIGHT + 2;
-        selContextY = y;
-        y += 12;
-        panelEdit = addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.panel.edit"),
-                        b -> editSelected())
-                .bounds(sidebarX, y, sidebarW, 20).build());
-        fadingButtons.add(panelEdit);
-        y += 24;
-
-        sectionLabelY = y;
-        y += 10;
-        fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.addSection"),
-                        b -> this.minecraft.setScreen(new AddSectionScreen(this)))
-                .bounds(sidebarX, y, pairW, 20).build()));
-        fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets"),
-                        b -> this.minecraft.setScreen(new PresetsScreen(this)))
-                .bounds(pairRightX, y, pairW, 20).build()));
-        y += 24;
-        if (DevMode.isUnlocked()) {
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.assignBanners"),
-                            b -> this.minecraft.setScreen(new BannerAssignmentScreen(this)))
-                    .bounds(sidebarX, y, sidebarW, 20).build());
-            y += 24;
-        }
-        resetLabelY = y;
-        y += 10;
-        fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetOrder"),
-                        b -> resetOrder())
-                .bounds(sidebarX, y, pairW, 20).build()));
-        fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.resetAll"),
-                        b -> confirmResetAll())
-                .bounds(pairRightX, y, pairW, 20).build()));
-
-        int doneY = this.height - 28;
-        int saveY = doneY - 24;
-        int settingsY = saveY - 24;
-        // All Settings must always be reachable -- it's the only way back to CLASSIC_ORGANIZER_LAYOUT and
-        // every other option, so never hide it even if the sidebar runs out of vertical room.
-        fadingButtons.add(addRenderableWidget(new HeartButton(sidebarX, settingsY, 20,
-                b -> this.minecraft.setScreen(new CreditsScreen(this)))));
-        fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.allSettings"),
-                        b -> this.minecraft.setScreen(new ConfigurationScreen(container, this)))
-                .bounds(sidebarX + 24, settingsY, sidebarW - 24, 20).build()));
-        saveButton = addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.save"),
-                        b -> saveOrder())
-                .bounds(sidebarX, saveY, sidebarW, 20).build());
-        fadingButtons.add(saveButton);
-        fadingButtons.add(addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-                .bounds(sidebarX, doneY, sidebarW, 20).build()));
     }
 
     private void buildSearchBox(int x, int y, int w, int h) {
@@ -316,7 +336,203 @@ public class SectionColorsScreen extends Screen {
             lastSearch = s;
             refreshListEntries(0);
         });
-        addRenderableWidget(searchBox);
+        if (classic) {
+            addRenderableWidget(searchBox);
+        } else {
+            searchBox.setBordered(false);
+            addWidget(searchBox);
+        }
+    }
+
+    private void layoutPanels() {
+        sidebarW = GlassSidebar.widthFor(this.width);
+        boolean sidebarRight = Config.colorsSidebarSide() == Config.SidebarSide.RIGHT;
+        panelTop = OUTER;
+        panelBottom = this.height - OUTER;
+        contentW = this.width - sidebarW - PANEL_GAP - SIDE_GUTTER * 2;
+        sidebarX = sidebarRight ? this.width - SIDE_GUTTER - sidebarW : SIDE_GUTTER;
+        contentX = sidebarRight ? SIDE_GUTTER : SIDE_GUTTER + sidebarW + PANEL_GAP;
+        listRowWidth = contentW - LIST_PAD * 2 - 2;
+        listCenterX = contentX + contentW / 2;
+    }
+
+    private void openEmbedded(ColorPickerScreen next) {
+        if (classic) {
+            ScreenSwoosh.drill(() -> next, Config.SWOOSH_BANNER_EDITOR);
+            return;
+        }
+        lastScroll = list != null ? list.getScrollAmount() : lastScroll;
+        infoPage = null;
+        editor = next;
+        rebuildWidgets();
+    }
+
+    private void closeEditor() {
+        editor = null;
+        rebuildWidgets();
+    }
+
+    private List<SectionCatalog.Entry> mainSections() {
+        List<SectionCatalog.Entry> source = allEntries.isEmpty() ? SectionCatalog.colorables() : allEntries;
+        List<SectionCatalog.Entry> out = new ArrayList<>();
+        for (SectionCatalog.Entry entry : source) {
+            if (entry.parent()) {
+                out.add(entry);
+            }
+        }
+        return out;
+    }
+
+    private void jumpToSection(ResourceLocation id) {
+        if (infoPage != null || pane != null || editor != null) {
+            infoPage = null;
+            pane = null;
+            if (editor != null) {
+                editor.releaseEmbedded();
+                editor = null;
+            }
+            rebuildWidgets();
+        }
+        clearSearch();
+        if (list == null) {
+            return;
+        }
+        list.jumpToSection(id);
+        selectedId = id;
+        lastSelectedId = id;
+    }
+
+    private void openPane(Screen next) {
+        if (editor != null) {
+            editor.releaseEmbedded();
+            editor = null;
+        }
+        infoPage = null;
+        pane = next;
+        rebuildWidgets();
+    }
+
+    private void sectionsChanged() {
+        allEntries = new ArrayList<>(SectionCatalog.colorables());
+        noSections = allEntries.isEmpty();
+        buildSidebar();
+    }
+
+    private boolean paneOpen() {
+        return !classic && (pane != null || editor != null || infoPage != null);
+    }
+
+    private int backArrowX() {
+        return contentX + 4;
+    }
+
+    private int backArrowY() {
+        return panelTop + 4;
+    }
+
+    private void renderBackArrow(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        int x = backArrowX();
+        int y = backArrowY();
+        boolean hovered = GlassArrow.contains(mouseX, mouseY, x, y);
+        backArrow.render(g, x, y, false, hovered, delta);
+        if (hovered) {
+            hoverPreviewTooltip = Component.translatable("gui.back");
+        }
+    }
+
+    private void closeOpenPane() {
+        if (pane != null) {
+            pane.onClose();
+            return;
+        }
+        if (editor != null) {
+            editor.onClose();
+            return;
+        }
+        closeInfo();
+    }
+
+    private void closePane() {
+        if (pane == null) {
+            return;
+        }
+        pane = null;
+        rebuildWidgets();
+    }
+
+    private void openInfo(InfoPane.Kind kind) {
+        if (infoPage == kind) {
+            return;
+        }
+        pane = null;
+        if (editor != null) {
+            editor.releaseEmbedded();
+            editor = null;
+        }
+        infoPage = kind;
+        infoPane.resetScroll();
+        rebuildWidgets();
+    }
+
+    private void closeInfo() {
+        if (infoPage == null) {
+            return;
+        }
+        infoPage = null;
+        rebuildWidgets();
+    }
+
+    private void buildSidebar() {
+        if (sidebar == null) {
+            sidebar = new GlassSidebar(container, this::onClose)
+                    .title(Component.translatable("createaddonorganizer.colors.sidebar.title"))
+                    .onUpdate(() -> Util.getPlatform().openUri(UpdateCheck.PAGE_URL))
+                    .onFolder(() -> Util.getPlatform().openPath(FMLPaths.CONFIGDIR.get()),
+                            Component.translatable("createaddonorganizer.settings.openFolder"));
+        }
+        List<GlassSidebar.Row> jump = sidebar.jumpRows();
+        jump.clear();
+        for (SectionCatalog.Entry entry : mainSections()) {
+            ResourceLocation target = entry.id();
+            jump.add(GlassSidebar.Row.of(entry.name(), () -> jumpToSection(target))
+                    .active(() -> infoPage == null && pane == null && target.equals(selectedId)));
+        }
+        List<GlassSidebar.Row> rows = sidebar.rows();
+        rows.clear();
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.addSection"),
+                        () -> openPane(new AddSectionScreen(this)))
+                .active(() -> pane instanceof AddSectionScreen));
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.presets"),
+                        () -> openPane(new PresetsScreen(this)))
+                .active(() -> pane instanceof PresetsScreen));
+        rows.add(GlassSidebar.Row.gap());
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.resetOrder"),
+                this::resetOrder).tone(GlassSidebar.Tone.DANGER));
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.resetAll"),
+                this::confirmResetAll).tone(GlassSidebar.Tone.DANGER));
+        if (PackDefaults.isActive()) {
+            rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.resetPack"),
+                            this::confirmResetToPack).tone(GlassSidebar.Tone.DANGER)
+                    .tooltip(Component.translatable("createaddonorganizer.colors.resetPack.tooltip")));
+        }
+        rows.add(GlassSidebar.Row.gap());
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.style"),
+                        () -> openPane(new MenuStyleScreen(this)))
+                .active(() -> pane instanceof MenuStyleScreen));
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.credits"),
+                        () -> openInfo(InfoPane.Kind.CREDITS))
+                .active(() -> infoPage == InfoPane.Kind.CREDITS));
+        rows.add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.bugReport"),
+                        () -> openInfo(InfoPane.Kind.BUGS))
+                .active(() -> infoPage == InfoPane.Kind.BUGS));
+        if (DevMode.isUnlocked()) {
+            rows.add(GlassSidebar.Row.of(
+                            Component.translatable("createaddonorganizer.colors.sidebar.assignBanners"),
+                            () -> ScreenSwoosh.drill(() -> new BannerAssignmentScreen(this),
+                                    Config.SWOOSH_BANNER_EDITOR))
+                    .trailing(() -> Component.translatable("createaddonorganizer.colors.sidebar.dev")));
+        }
+        sidebar.setBounds(sidebarX, panelTop, sidebarW, panelBottom - panelTop);
     }
 
     private void refreshListEntries(double scroll) {
@@ -325,7 +541,10 @@ public class SectionColorsScreen extends Screen {
         }
         list.setEntries(filterEntries(allEntries, searchQuery));
         list.setScrollAmount(scroll);
-        updateCountLine();
+    }
+
+    private static boolean keeps(SectionCatalog.Entry entry, String q) {
+        return q.isEmpty() || matchesQuery(entry, q);
     }
 
     private static List<SectionCatalog.Entry> filterEntries(List<SectionCatalog.Entry> source, String query) {
@@ -338,7 +557,7 @@ public class SectionColorsScreen extends Screen {
         while (i < source.size()) {
             SectionCatalog.Entry entry = source.get(i);
             if (!entry.parent()) {
-                if (matchesQuery(entry, q)) {
+                if (keeps(entry, q)) {
                     out.add(entry);
                 }
                 i++;
@@ -348,10 +567,10 @@ public class SectionColorsScreen extends Screen {
             while (end < source.size() && !source.get(end).parent()) {
                 end++;
             }
-            boolean hubMatch = matchesQuery(entry, q);
+            boolean hubMatch = keeps(entry, q);
             List<SectionCatalog.Entry> kids = new ArrayList<>();
             for (int k = i + 1; k < end; k++) {
-                if (hubMatch || matchesQuery(source.get(k), q)) {
+                if (hubMatch || keeps(source.get(k), q)) {
                     kids.add(source.get(k));
                 }
             }
@@ -368,41 +587,30 @@ public class SectionColorsScreen extends Screen {
         return entry.name().getString().toLowerCase(Locale.ROOT).contains(q);
     }
 
-    private void updateCountLine() {
-        if (classic) {
-            countLine = Component.empty();
+
+    private void openTabRename(SectionCatalog.Entry entry) {
+        if (TabLayoutStore.byId(entry.id()) == null) {
+            Notice.show(Component.translatable("createaddonorganizer.colors.tabName.notEditable", entry.name()),
+                    Notice.RED);
             return;
         }
-        if (searchQuery.trim().isEmpty()) {
-            int hubs = 0;
-            int sections = 0;
-            for (SectionCatalog.Entry entry : allEntries) {
-                if (entry.parent()) {
-                    hubs++;
-                } else {
-                    sections++;
-                }
-            }
-            countLine = Component.translatable("createaddonorganizer.colors.search.count", sections, hubs);
-        } else {
-            int matching = 0;
-            for (ColorList.Row row : list.children()) {
-                if (!row.data.parent()) {
-                    matching++;
-                }
-            }
-            countLine = Component.translatable("createaddonorganizer.colors.search.matching", matching);
-        }
+        this.minecraft.setScreen(new RenameTabScreen(this, entry.id()));
     }
 
     private void openEditor(SectionCatalog.Entry entry) {
-        this.minecraft.setScreen(new ColorPickerScreen(this, entry.id(), entry.name(), entry.parent()));
+        if (classic) {
+            BannerEditor.open(this, entry.id(), entry.name(), entry.parent());
+            return;
+        }
+        openEmbedded(new ColorPickerScreen(this, entry.id(), entry.name(), entry.parent()));
     }
 
-    private void editSelected() {
-        if (selectedEntry != null && !selectedEntry.readOnly()) {
-            openEditor(selectedEntry);
+    private void openHighlightEditor(ResourceLocation tabId, Component title) {
+        if (classic) {
+            BannerEditor.openHighlight(this, tabId, title);
+            return;
         }
+        openEmbedded(new ColorPickerScreen(this, tabId, title, true, true));
     }
 
     private void clearSearch() {
@@ -412,7 +620,19 @@ public class SectionColorsScreen extends Screen {
     }
 
     @Override
+    public void tick() {
+        if (pane != null) {
+            pane.tick();
+            return;
+        }
+        super.tick();
+    }
+
+    @Override
     public void removed() {
+        if (editor != null) {
+            editor.releaseEmbedded();
+        }
         if (list != null) {
             lastScroll = list.getScrollAmount();
         }
@@ -422,96 +642,204 @@ public class SectionColorsScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        if (!classic && !priming) {
+            GlassSkin.panel(g, contentX, panelTop, contentW, panelBottom - panelTop);
+        }
+    }
+
+    @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        saveButton.active = orderDirty;
-        if (panelEdit != null) {
-            panelEdit.active = selectedEntry != null && !selectedEntry.readOnly();
-        }
-        if (!animationDone()) {
-            for (int i = 0; i < fadingButtons.size() && i < BUTTON_DELAYS.length; i++) {
-
-                fadingButtons.get(i).setAlpha(Math.max(animProgress(BUTTON_DELAYS[i], FADE_MS), 0.04f));
+        if (priming) {
+            renderBackground(g, mouseX, mouseY, partialTick);
+            g.drawCenteredString(this.font, this.title, this.width / 2, 16, 0xFFFFFFFF);
+            long elapsed = System.currentTimeMillis() - primeStart;
+            LoadingSpinner.renderCentered(g, 0, listAreaTop, this.width, listAreaBottom - listAreaTop, elapsed);
+            g.drawCenteredString(this.font, Component.translatable("createaddonorganizer.tabs.loading"),
+                    this.width / 2, listAreaTop + (listAreaBottom - listAreaTop) / 2 + LoadingSpinner.labelOffset(),
+                    MenuSkin.bodyColor(0xFF8A9AA8));
+            if (!primeWorkDone) {
+                primeWorkDone = ClientRegistries.advancePrime(PRIME_BUDGET_NANOS);
+            } else if (elapsed >= LoadingSpinner.cycleMs()) {
+                priming = false;
+                rebuildWidgets();
             }
+            return;
         }
+
+        long now = System.nanoTime();
+        float delta = frameNanos == 0L ? 0f : Math.min(0.25f, (now - frameNanos) / 1_000_000_000f);
+        frameNanos = now;
+
         hoverPreviewTooltip = null;
+        popupEntry = null;
         super.render(g, mouseX, mouseY, partialTick);
-        if (hoverPreviewTooltip != null) {
-            g.renderTooltip(this.font, hoverPreviewTooltip, mouseX, mouseY);
-        }
 
-        float slide = animProgress(0, TITLE_SLIDE_MS);
-        int titleY = Math.round(-44 + (16 - -44) * slide);
-        int titleAlpha = Math.round(255 * slide);
-
-        if (titleAlpha >= 8) {
-            Component modTitle = Component.literal(container.getModInfo().getDisplayName());
-            float scale = 1.6f;
-            g.pose().pushPose();
-            g.pose().scale(scale, scale, scale);
-
-            g.drawCenteredString(this.font, modTitle, Math.round(this.width / 2 / scale), Math.round(titleY / scale),
-                    (titleAlpha << 24) | 0x00E4E4E4);
-            renderTitleGlint(g, modTitle.getString(), scale, titleY, slide);
-            g.pose().popPose();
-        }
-
-        int hintAlpha = Math.round(0xAA * animProgress(HINT_DELAY_MS, FADE_MS));
-        if (hintAlpha >= 8) {
-            String hintKey = classic ? "createaddonorganizer.colors.hint" : "createaddonorganizer.colors.hint2";
-            g.drawCenteredString(this.font, Component.translatable(hintKey),
-                    this.width / 2, classic ? 42 : 32, (hintAlpha << 24) | 0x00AAAAAA);
-        }
-
-        int dividerAlpha = Math.round(0x60 * animProgress(DIVIDER_DELAY_MS, FADE_MS));
-        if (dividerAlpha >= 8) {
-            if (classic) {
-                g.fill(this.width / 2 - 160, 112, this.width / 2 + 160, 113, (dividerAlpha << 24) | 0x00FFFFFF);
+        if (pane != null || editor != null) {
+            sidebar.layout();
+            sidebar.render(g, this.font, mouseX, mouseY);
+            if (pane != null) {
+                pane.render(g, mouseX, mouseY, partialTick);
             } else {
-                g.fill(listCenterX - listRowWidth / 2, listAreaTop - 4, listCenterX + listRowWidth / 2,
-                        listAreaTop - 3, (dividerAlpha << 24) | 0x00FFFFFF);
+                editor.render(g, mouseX, mouseY, partialTick);
             }
+            renderArrows(g, mouseX, mouseY, delta);
+            renderBackArrow(g, mouseX, mouseY, delta);
+            Component paneHover = hoverPreviewTooltip != null ? hoverPreviewTooltip : sidebar.hoverTip();
+            if (paneHover != null) {
+                g.renderTooltip(this.font, this.font.split(paneHover, 200), mouseX, mouseY);
+            }
+            return;
         }
 
-        if (!classic) {
-            renderSidebarInfo(g);
+        if (classic) {
+            g.drawCenteredString(this.font, Component.literal(container.getModInfo().getDisplayName()),
+                    this.width / 2, 16, MenuSkin.titleColor(0xFFE4E4E4));
+            g.drawCenteredString(this.font, Component.translatable("createaddonorganizer.colors.hint"),
+                    this.width / 2, 38, 0xFFAAAAAA);
+        } else if (infoPage != null) {
+            sidebar.layout();
+            sidebar.render(g, this.font, mouseX, mouseY);
+            infoPane.render(g, this.font, mouseX, mouseY);
+            hoverPreviewTooltip = infoPane.hoverTip();
+        } else {
+            renderContentChrome(g, mouseX, mouseY);
+            sidebar.layout();
+            sidebar.render(g, this.font, mouseX, mouseY);
+        }
+
+        if (infoPage != null) {
+            renderArrows(g, mouseX, mouseY, delta);
+            renderBackArrow(g, mouseX, mouseY, delta);
+            Component paneTip = hoverPreviewTooltip != null ? hoverPreviewTooltip : sidebar.hoverTip();
+            if (paneTip != null) {
+                g.renderTooltip(this.font, this.font.split(paneTip, 200), mouseX, mouseY);
+            }
+            return;
         }
 
         if (noSections) {
             renderEmptyState(g);
-        } else if (!classic && list.children().isEmpty()) {
+        } else if (list.children().isEmpty()) {
             int y = listAreaTop + (listAreaBottom - listAreaTop) / 2 - 4;
             g.drawCenteredString(this.font, Component.translatable("createaddonorganizer.colors.search.none"),
                     listCenterX, y, 0xFFAAAAAA);
         }
-    }
 
-    private void renderSidebarInfo(GuiGraphics g) {
-        float fade = animProgress(HINT_DELAY_MS, FADE_MS);
-        if (Math.round(0xFF * fade) < 8) {
+        renderArrows(g, mouseX, mouseY, delta);
+
+        if (popupEntry != null) {
+            renderBannerPopup(g, mouseX, mouseY);
             return;
         }
-        if (!noSections) {
-            g.drawString(this.font, countLine, MARGIN, listAreaTop - 10,
-                    (Math.round(0xAA * fade) << 24) | 0x00AAAAAA);
+        Component tip = hoverPreviewTooltip;
+        if (tip == null && !classic && sidebar != null) {
+            tip = sidebar.hoverTip();
         }
-        int labelColor = (Math.round(0x80 * fade) << 24) | 0x008F9AA5;
-        if (sectionLabelY >= 0) {
-            drawGroupLabel(g, Component.translatable("createaddonorganizer.colors.group.section"), sectionLabelY, labelColor);
+        if (tip != null) {
+            g.renderTooltip(this.font, this.font.split(tip, 200), mouseX, mouseY);
         }
-        if (resetLabelY >= 0) {
-            drawGroupLabel(g, Component.translatable("createaddonorganizer.colors.group.reset"), resetLabelY, labelColor);
-        }
-        renderSelectionPanel(g, fade);
     }
 
-    private void drawGroupLabel(GuiGraphics g, Component label, int y, int color) {
-        String text = label.getString();
-        int dashW = this.font.width("-");
-        int available = Math.max(0, sidebarW - this.font.width(text) - 8);
-        int dashCount = Math.max(1, available / 2 / dashW);
-        String dashes = "-".repeat(dashCount);
-        String full = dashes + " " + text + " " + dashes;
-        g.drawCenteredString(this.font, full, sidebarX + sidebarW / 2, y, color);
+    private void renderContentChrome(GuiGraphics g, int mouseX, int mouseY) {
+        GlassSkin.widgetBox(g, searchX, searchY, searchW, SEARCH_H, searchBox.isFocused());
+        GlassSidebar.magnifier(g, searchX + 6, searchY + 6, GlassSkin.bodyTextColor());
+        searchBox.setX(searchX + 18);
+        searchBox.setY(searchY + (SEARCH_H - 8) / 2);
+        searchBox.setWidth(searchW - 24);
+        searchBox.render(g, mouseX, mouseY, 0f);
+
+        int textY = searchY + (SEARCH_H - 8) / 2;
+        if (!noSections) {
+            renderTip(g, mouseX, mouseY, textY);
+        } else {
+            tipLeft = 0;
+            tipRight = 0;
+        }
+        int helpY = searchY + (SEARCH_H - HELP_SIZE) / 2;
+        boolean helpHovered = GlassSidebar.inside(mouseX, mouseY, helpX, helpY, HELP_SIZE, HELP_SIZE);
+        GlassSkin.widgetBox(g, helpX, helpY, HELP_SIZE, HELP_SIZE, helpHovered);
+        String mark = "?";
+        g.drawString(this.font, mark, helpX + (HELP_SIZE - this.font.width(mark)) / 2, textY,
+                helpHovered ? GlassSkin.titleTextColor() : GlassSkin.bodyTextColor(), GlassSkin.shadow());
+        if (helpHovered) {
+            hoverPreviewTooltip = Component.translatable("createaddonorganizer.colors.hint2");
+        }
+    }
+
+    private void renderTip(GuiGraphics g, int mouseX, int mouseY, int textY) {
+        int left = searchX + searchW + 8;
+        int right = helpX - 6;
+        if (right - left < 40) {
+            tipLeft = 0;
+            tipRight = 0;
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        float fade = 1f;
+        if (Config.animOn(Config.ANIM_CONTROL_TIPS)) {
+            while (now - tipStart >= TIP_STEP_MS) {
+                tipStart += TIP_STEP_MS;
+                tipIndex = (tipIndex + 1) % TIP_KEYS.length;
+            }
+            long phase = now - tipStart;
+            if (phase < TIP_FADE_MS) {
+                fade = phase / (float) TIP_FADE_MS;
+            } else if (phase > TIP_FADE_MS + TIP_HOLD_MS) {
+                fade = (TIP_STEP_MS - phase) / (float) TIP_FADE_MS;
+            }
+        } else {
+            tipStart = now;
+        }
+
+        Component tip = Component.translatable(TIP_KEYS[tipIndex]);
+        int width = this.font.width(tip);
+        if (width > right - left) {
+            tipLeft = 0;
+            tipRight = 0;
+            return;
+        }
+        int centerX = (left + right) / 2;
+        tipLeft = centerX - width / 2 - 4;
+        tipRight = centerX + width / 2 + 4;
+
+        boolean hovered = overTip(mouseX, mouseY);
+        int alpha = Math.round((hovered ? 0xFF : 0xC0) * Mth.clamp(fade, 0f, 1f));
+        if (alpha < 8) {
+            return;
+        }
+        int color = MenuSkin.mixColor(TIP_BASE, GlassSkin.accent(), hovered ? 0.85f : 0.55f);
+        g.drawCenteredString(this.font, tip, centerX, textY, (alpha << 24) | (color & 0x00FFFFFF));
+    }
+
+    private boolean overTip(double mouseX, double mouseY) {
+        return tipRight > tipLeft && mouseX >= tipLeft && mouseX < tipRight
+                && mouseY >= searchY && mouseY < searchY + SEARCH_H;
+    }
+
+    private void nextTip() {
+        tipIndex = (tipIndex + 1) % TIP_KEYS.length;
+        tipStart = System.currentTimeMillis();
+    }
+
+    private void renderArrows(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        int y = GlassArrow.top(this.height);
+        int leftX = GlassArrow.leftX();
+        int rightX = GlassArrow.rightX(this.width);
+
+        boolean leftHovered = GlassArrow.contains(mouseX, mouseY, leftX, y);
+        boolean rightHovered = GlassArrow.contains(mouseX, mouseY, rightX, y);
+
+        leftArrow.render(g, leftX, y, false, leftHovered, delta);
+        rightArrow.render(g, rightX, y, true, rightHovered, delta);
+
+        if (leftHovered) {
+            hoverPreviewTooltip = Component.translatable("createaddonorganizer.colors.allSettings");
+        } else if (rightHovered) {
+            hoverPreviewTooltip = Component.translatable("createaddonorganizer.tabs.title");
+        }
     }
 
     private List<ResourceLocation> currentRainbowOrder() {
@@ -565,79 +893,95 @@ public class SectionColorsScreen extends Screen {
         return new ColorSpec(mulAlpha(spec.color1(), factor), mulAlpha(spec.color2(), factor), spec.direction(), spec.style());
     }
 
-    private void renderSelectionPanel(GuiGraphics g, float fade) {
-        if (selectedEntry == null) {
-            g.drawString(this.font, Component.translatable("createaddonorganizer.colors.panel.none"),
-                    sidebarX + 2, selPreviewY + 5, (Math.round(0xAA * fade) << 24) | 0x00AAAAAA);
-            return;
+    private void renderBannerPopup(GuiGraphics g, int mouseX, int mouseY) {
+        SectionCatalog.Entry entry = popupEntry;
+        int px = mouseX + 12;
+        int py = mouseY + 12;
+        if (px + POPUP_W > this.width - 2) {
+            px = Math.max(2, mouseX - 12 - POPUP_W);
         }
-        int x = sidebarX;
-        int y = selPreviewY;
-        int w = sidebarW;
+        if (py + POPUP_H > this.height - 2) {
+            py = Math.max(2, this.height - 2 - POPUP_H);
+        }
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 400);
+        GlassSkin.popupPanel(g, px, py, POPUP_W, POPUP_H);
+
+        int x = px + POPUP_PAD;
+        int y = py + POPUP_PAD;
+        int w = BannerTextures.WIDTH;
         int h = BannerTextures.HEIGHT;
-        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, mulAlpha(0xFF000000, fade));
 
-        ResourceLocation tex = null;
-        String bannerRef = Config.bannerRefFor(selectedEntry.id());
-        if (bannerRef != null) {
-            tex = BannerTextures.resolve(bannerRef);
-        }
+        String bannerRef = Config.bannerRefFor(entry.id());
+        final ResourceLocation tex = bannerRef != null ? BannerTextures.resolve(bannerRef) : null;
         if (tex != null) {
-            int texHeight = BannerAnimation.preview(tex, false, 1)
-                    .map(BannerAnimation.AnimInfo::frameCount).orElse(1) * BannerTextures.HEIGHT;
-            g.setColor(1f, 1f, 1f, fade);
-            BannerTextures.blitCropped(g, tex, x, y, w, h, texHeight);
-            g.setColor(1f, 1f, 1f, 1f);
+            Optional<BannerAnimation.AnimInfo> anim = BannerAnimation.get(tex);
+            int frameCount = anim.map(BannerAnimation.AnimInfo::frameCount).orElse(1);
+            int frame = anim.map(info -> BannerAnimation.currentFrame(tex, info, true)).orElse(0);
+            g.blit(tex, x, y, w, h, 0.0F, frame * (float) BannerTextures.HEIGHT, BannerTextures.WIDTH,
+                    BannerTextures.HEIGHT, BannerTextures.WIDTH, frameCount * BannerTextures.HEIGHT);
         } else {
-            ColorSpec bannerSpec = opaqueSpec(previewBannerColor(selectedEntry.id()));
-            BannerFill.draw(g, x, y, x + w, y + h, mulAlphaSpec(bannerSpec, fade));
-            g.fill(x, y, x + w, y + 1, mulAlpha(ColorUtil.brighten(bannerSpec.color1(), 0.4f), fade));
+            ColorSpec bannerSpec = opaqueSpec(previewBannerColor(entry.id()));
+            BannerFill.draw(g, x, y, x + w, y + h, bannerSpec);
+            g.fill(x, y, x + w, y + 1, ColorUtil.brighten(bannerSpec.color1(), 0.4f));
         }
+        g.fill(x, y + h, x + w, y + h + 1, 0x80000000);
 
-        String full = selectedEntry.name().getString();
+        String full = entry.name().getString();
         String clipped = font.width(full) <= w - 8 ? full : font.plainSubstrByWidth(full, w - 8);
         int textY = y + (h - 8) / 2 + 1;
-        ColorSpec primary = mulAlphaSpec(previewTextColor(selectedEntry.id()), fade);
-        ColorSpec secondary = previewTextSecondaryColor(selectedEntry.id());
-        boolean shadowOn = Config.titleTextShadow(selectedEntry.id());
-        Integer shadowOverride = shadowOn ? Config.textShadowColorFor(selectedEntry.id()) : null;
+        ColorSpec secondary = previewTextSecondaryColor(entry.id());
+        boolean shadowOn = Config.titleTextShadow(entry.id());
+        Integer shadowOverride = shadowOn ? Config.textShadowColorFor(entry.id()) : null;
         boolean vanillaShadow = shadowOn && shadowOverride == null;
-        ColorSpec outline = Config.textOutlineColorFor(selectedEntry.id());
-        TwoToneText.draw(g, font, Component.literal(clipped), x + 4, textY, x + w - 4, primary,
-                secondary != null ? mulAlphaSpec(secondary, fade) : null,
-                Config.twoToneSplitFor(selectedEntry.id()), vanillaShadow,
-                shadowOverride != null ? mulAlpha(shadowOverride, fade) : 0,
-                outline != null ? mulAlphaSpec(outline, fade) : null);
+        ColorSpec outline = Config.textOutlineColorFor(entry.id());
+        TwoToneText.draw(g, font, Component.literal(clipped), x + 4, textY, x + w - 4,
+                previewTextColor(entry.id()), secondary, Config.twoToneSplitFor(entry.id()), vanillaShadow,
+                shadowOverride != null ? shadowOverride : 0, outline);
 
         Component context;
-        if (selectedEntry.parent()) {
+        if (entry.parent()) {
             context = Component.translatable("createaddonorganizer.colors.panel.hub");
+        } else if (entry.tabOwned()) {
+            context = Component.translatable("createaddonorganizer.colors.panel.ofTab",
+                    nameOfTab(TabLayout.ownerOfSectionId(entry.id())));
         } else {
-            ResourceLocation parentId = Config.parentFor(selectedEntry.id());
-            Component parentName = Component.literal(parentId != null ? parentId.toString() : "?");
-            if (parentId != null) {
-                for (SectionCatalog.Entry entry : allEntries) {
-                    if (entry.id().equals(parentId)) {
-                        parentName = entry.name();
-                        break;
-                    }
-                }
+            context = Component.translatable("createaddonorganizer.colors.panel.in",
+                    nameOfTab(Config.parentFor(entry.id())));
+        }
+        int lineY = y + h + 5;
+        g.drawString(this.font, font.plainSubstrByWidth(context.getString(), w), x, lineY,
+                GlassSkin.bodyTextColor(), GlassSkin.shadow());
+        String detail = tex != null
+                ? Component.translatable("createaddonorganizer.banner.mode.image").getString()
+                : Config.formatColorSpec(opaqueSpec(previewBannerColor(entry.id())), true);
+        g.drawString(this.font, font.plainSubstrByWidth(detail, w), x, lineY + 10,
+                GlassSkin.bodyTextColor(), GlassSkin.shadow());
+        g.pose().popPose();
+    }
+
+    private Component nameOfTab(ResourceLocation id) {
+        if (id == null) {
+            return Component.literal("?");
+        }
+        for (SectionCatalog.Entry entry : allEntries) {
+            if (entry.id().equals(id)) {
+                return entry.name();
             }
-            context = Component.translatable("createaddonorganizer.colors.panel.in", parentName);
         }
-        if (selContextY >= 0) {
-            String ctx = context.getString();
-            String ctxClipped = font.width(ctx) <= w - 4 ? ctx : font.plainSubstrByWidth(ctx, w - 4);
-            g.drawString(this.font, ctxClipped, sidebarX + 2, selContextY,
-                    (Math.round(0xAA * fade) << 24) | 0x00AAAAAA);
+        TabLayout layout = TabLayoutStore.byId(id);
+        if (layout != null && layout.nameOverride() != null) {
+            return Component.literal(layout.nameOverride());
         }
+        CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.get(id);
+        return tab != null ? tab.getDisplayName() : Component.literal(id.toString());
     }
 
     private void renderEmptyState(GuiGraphics g) {
         int y = listAreaTop + (listAreaBottom - listAreaTop) / 2 - 4;
         if (konamiTriggeredMillis != 0) {
             if (System.currentTimeMillis() - konamiTriggeredMillis >= KONAMI_CLOSE_DELAY_MS) {
-                this.minecraft.setScreen(parent);
+                ScreenSwoosh.pull(() -> parent, Config.SWOOSH_BACK);
                 return;
             }
             g.drawCenteredString(this.font, Component.literal("told you not to"), this.width / 2, y, 0xFFFF5555);
@@ -660,6 +1004,26 @@ public class SectionColorsScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (priming) {
+            return keyCode == GLFW.GLFW_KEY_ESCAPE && super.keyPressed(keyCode, scanCode, modifiers);
+        }
+        if (pane != null) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                closePane();
+                return true;
+            }
+            return pane.keyPressed(keyCode, scanCode, modifiers);
+        }
+        if (editor != null) {
+            return editor.keyPressed(keyCode, scanCode, modifiers);
+        }
+        if (infoPage != null) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                closeInfo();
+                return true;
+            }
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (renamingId != null) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 confirmRename();
@@ -683,8 +1047,12 @@ public class SectionColorsScreen extends Screen {
                 konamiProgress = keyCode == KONAMI_SEQUENCE[0] ? 1 : 0;
             }
         }
-        if (keyCode == GLFW.GLFW_KEY_Z && Screen.hasControlDown() && lastUndo != null
+        if (keyCode == GLFW.GLFW_KEY_Z && Screen.hasControlDown()
                 && (searchBox == null || !searchBox.isFocused())) {
+            if (lastUndo == null) {
+                Sfx.denied();
+                return true;
+            }
             Runnable undo = lastUndo;
             lastUndo = null;
             undo.run();
@@ -695,6 +1063,15 @@ public class SectionColorsScreen extends Screen {
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
+        if (priming) {
+            return false;
+        }
+        if (pane != null) {
+            return pane.charTyped(codePoint, modifiers);
+        }
+        if (editor != null) {
+            return editor.charTyped(codePoint, modifiers);
+        }
         if (renameBox != null && renameBox.charTyped(codePoint, modifiers)) {
             return true;
         }
@@ -702,7 +1079,81 @@ public class SectionColorsScreen extends Screen {
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (!classic && sidebar != null && sidebar.mouseDragged(mouseY)) {
+            return true;
+        }
+        if (pane != null) {
+            return pane.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+        if (editor != null) {
+            return editor.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+        if (infoPage != null) {
+            return infoPane.mouseDragged(mouseY);
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (sidebar != null) {
+            sidebar.mouseReleased();
+        }
+        infoPane.mouseReleased();
+        if (pane != null) {
+            return pane.mouseReleased(mouseX, mouseY, button);
+        }
+        if (editor != null) {
+            return editor.mouseReleased(mouseX, mouseY, button);
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (pane != null) {
+            return (sidebar != null && sidebar.mouseScrolled(mouseX, mouseY, scrollY))
+                    || pane.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+        if (editor != null) {
+            return editor.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
+                    || (sidebar != null && sidebar.mouseScrolled(mouseX, mouseY, scrollY));
+        }
+        if (!classic && !priming && sidebar != null && sidebar.mouseScrolled(mouseX, mouseY, scrollY)) {
+            return true;
+        }
+        if (infoPage != null) {
+            return infoPane.mouseScrolled(mouseX, mouseY, scrollY);
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (priming) {
+            return false;
+        }
+        if (button == 0 && paneOpen()
+                && GlassArrow.contains(mouseX, mouseY, backArrowX(), backArrowY())) {
+            closeOpenPane();
+            return true;
+        }
+        if (button == 0 && !classic && sideArrowClicked(mouseX, mouseY)) {
+            return true;
+        }
+        if (pane != null) {
+            if (button == 0 && sidebar != null && sidebar.mouseClicked(mouseX, mouseY)) {
+                return true;
+            }
+            return pane.mouseClicked(mouseX, mouseY, button);
+        }
+        if (editor != null) {
+            if (editor.mouseClicked(mouseX, mouseY, button)) {
+                return true;
+            }
+            return button == 0 && sidebar != null && sidebar.mouseClicked(mouseX, mouseY);
+        }
         if (renamingId != null) {
             if (renameConfirm.mouseClicked(mouseX, mouseY, button)
                     || renameCancel.mouseClicked(mouseX, mouseY, button)
@@ -711,7 +1162,34 @@ public class SectionColorsScreen extends Screen {
             }
             cancelRename();
         }
+        if (button == 0 && classic && sideArrowClicked(mouseX, mouseY)) {
+            return true;
+        }
+        if (!classic && button == 0 && sidebar != null && sidebar.mouseClicked(mouseX, mouseY)) {
+            return true;
+        }
+        if (!classic && button == 0 && infoPage == null && pane == null && editor == null
+                && overTip(mouseX, mouseY)) {
+            nextTip();
+            return true;
+        }
+        if (infoPage != null) {
+            return button == 0 && infoPane.mouseClicked(mouseX, mouseY);
+        }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private boolean sideArrowClicked(double mouseX, double mouseY) {
+        int arrowY = GlassArrow.top(this.height);
+        if (GlassArrow.contains(mouseX, mouseY, GlassArrow.leftX(), arrowY)) {
+            ScreenSwoosh.pull(() -> new AllSettingsScreen(this, container), Config.SWOOSH_ARROW_LEFT);
+            return true;
+        }
+        if (GlassArrow.contains(mouseX, mouseY, GlassArrow.rightX(this.width), arrowY)) {
+            ScreenSwoosh.push(() -> new TabStudioScreen(this), Config.SWOOSH_ARROW_RIGHT);
+            return true;
+        }
+        return false;
     }
 
     private void startRename(SectionCatalog.Entry entry) {
@@ -733,12 +1211,26 @@ public class SectionColorsScreen extends Screen {
             return;
         }
         ResourceLocation id = renamingId;
-        String name = renameBox.getValue().trim();
+        String typed = renameBox.getValue();
+        String name = typed.trim();
+        boolean blankOnPurpose = name.isEmpty() && !typed.isEmpty();
+        if (blankOnPurpose) {
+            name = "";
+        }
         Component title;
-        if (name.isEmpty()) {
+        if (TabLayout.ownerOfSectionId(id) != null) {
+            if (name.isEmpty() && !blankOnPurpose) {
+                cancelRename();
+                return;
+            }
+            renameInOwningLayout(id, name);
+            title = Component.literal(name);
+        } else if (name.isEmpty() && !blankOnPurpose) {
             Config.clearSectionName(id);
             CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.get(id);
-            title = tab != null ? tab.getDisplayName() : Component.literal(id.toString());
+            Component nativeTitle = LiveColors.nativeTitle(id);
+            title = tab != null ? tab.getDisplayName()
+                    : nativeTitle != null ? nativeTitle : Component.literal(id.toString());
         } else {
             Config.setSectionName(id, name);
             title = Component.literal(name);
@@ -746,7 +1238,8 @@ public class SectionColorsScreen extends Screen {
         LiveColors.applyTitle(id, title);
         list.updateName(id, title);
         UnaryOperator<SectionCatalog.Entry> retitle = e -> e.id().equals(id)
-                ? new SectionCatalog.Entry(id, title, e.parent(), e.readOnly(), e.nativeTextColor(), e.nativeSecondaryTextColor())
+                ? new SectionCatalog.Entry(id, title, e.parent(), e.readOnly(), e.nativeTextColor(),
+                        e.nativeSecondaryTextColor(), e.tabOwned())
                 : e;
         allEntries.replaceAll(retitle);
         if (orderDirty && pendingOrder != null) {
@@ -758,6 +1251,21 @@ public class SectionColorsScreen extends Screen {
         cancelRename();
     }
 
+    private void renameInOwningLayout(ResourceLocation id, String name) {
+        ResourceLocation owner = TabLayout.ownerOfSectionId(id);
+        if (owner == null) {
+            return;
+        }
+        TabLayout layout = TabLayoutStore.byId(owner);
+        if (layout == null) {
+            return;
+        }
+        TabLayout updated = layout.withSectionTitle(id, name);
+        if (updated != layout) {
+            TabLayoutStore.put(updated);
+        }
+    }
+
     private void cancelRename() {
         renamingId = null;
         renameBox = null;
@@ -765,93 +1273,37 @@ public class SectionColorsScreen extends Screen {
         renameCancel = null;
     }
 
-    private void renderTitleGlint(GuiGraphics g, String title, float scale, int titleY, float slide) {
-        long since = System.currentTimeMillis() - openedMillis - ANIM_TOTAL_MS;
-        if (since < 0) {
-            return;
-        }
-        long inCycle = since % GLINT_PERIOD_MS;
-        if (inCycle >= GLINT_SWEEP_MS) {
-            return;
-        }
-
-        int textW = this.font.width(title);
-        int startX = Math.round(this.width / 2 / scale) - textW / 2;
-        int y = Math.round(titleY / scale);
-
-        float t = inCycle / (float) GLINT_SWEEP_MS;
-        float halfW = textW * 0.12f;
-        float reach = halfW + GLINT_SLANT / 2;
-        float waveX = -reach + (textW + 2 * reach) * t + startX;
-
-        int screenTop = (int) Math.floor((y - 1) * scale);
-        int screenBottom = (int) Math.ceil((y + this.font.lineHeight + 1) * scale);
-        int strips = 7;
-
-        g.pose().pushPose();
-
-        g.pose().translate(0, 0, 1);
-        for (int s = 0; s < strips; s++) {
-            int sy0 = screenTop + (screenBottom - screenTop) * s / strips;
-            int sy1 = screenTop + (screenBottom - screenTop) * (s + 1) / strips;
-            float stripWaveX = waveX + GLINT_SLANT * (0.5f - (s + 0.5f) / strips);
-            g.enableScissor(0, sy0, this.width, sy1);
-            drawGlintLetters(g, title, startX, y, stripWaveX, halfW, slide);
-            g.disableScissor();
-        }
-        g.pose().popPose();
-    }
-
-    private void drawGlintLetters(GuiGraphics g, String title, int startX, int y, float waveX, float halfW,
-            float slide) {
-        int x = startX;
-        for (int i = 0; i < title.length(); i++) {
-            String ch = title.substring(i, i + 1);
-            int w = this.font.width(ch);
-            float d = Math.abs((x + w / 2f) - waveX) / halfW;
-            if (d < 1f) {
-                float wave = (float) Math.pow(Math.cos(d * Math.PI / 2), 4);
-
-                int haloA = Math.round(255 * GLINT_HALO_ALPHA * wave * slide);
-                if (haloA >= 8) {
-                    int halo = (haloA << 24) | GLINT_COLOR;
-                    g.drawString(this.font, ch, x - 1, y, halo, false);
-                    g.drawString(this.font, ch, x + 1, y, halo, false);
-                    g.drawString(this.font, ch, x, y - 1, halo, false);
-                    g.drawString(this.font, ch, x, y + 1, halo, false);
-                }
-                int a = Math.round(255 * GLINT_MAX_ALPHA * wave * slide);
-                if (a >= 8) {
-
-                    g.drawString(this.font, ch, x, y, (a << 24) | GLINT_COLOR, false);
-                }
-            }
-            x += w;
-        }
-    }
-
-    private boolean animationDone() {
-        return System.currentTimeMillis() - openedMillis >= ANIM_TOTAL_MS;
-    }
-
-    private float animProgress(long delayMs, long durationMs) {
-        float t = Mth.clamp((System.currentTimeMillis() - openedMillis - delayMs) / (float) durationMs, 0f, 1f);
-        float inv = 1f - t;
-        return 1f - inv * inv * inv;
-    }
-
-    private float rowAlpha(int rowIndex) {
-        return animProgress(ROWS_DELAY_MS + Math.min(rowIndex, ROW_STAGGER_CAP) * ROW_STAGGER_MS, FADE_MS);
-    }
-
     private static int mulAlpha(int argb, float factor) {
         int a = Math.round(((argb >>> 24) & 0xFF) * factor);
         return (a << 24) | (argb & 0x00FFFFFF);
     }
 
+    private static boolean isOrderable(SectionCatalog.Entry entry) {
+        return !entry.readOnly() && !entry.tabOwned();
+    }
+
+    private static boolean boundToGroup(SectionCatalog.Entry entry) {
+        return entry.parent() || SectionCatalog.isModDrawn(entry.id()) || LiveColors.isAdoptedNative(entry.id());
+    }
+
+    private static ResourceLocation hubOf(ResourceLocation id) {
+        ResourceLocation live = LiveColors.findParent(id);
+        return live != null ? live : Config.parentFor(id);
+    }
+
     private void markOrderDirty() {
+        List<SectionCatalog.Entry> previous = orderDirty && pendingOrder != null
+                ? new ArrayList<>(pendingOrder)
+                : new ArrayList<>(allEntries);
         pendingOrder = list.currentEntries();
         orderDirty = true;
+        saveOrder();
+        lastUndo = () -> {
+            pendingOrder = previous;
+            orderDirty = true;
+            saveOrder();
+            rebuildWidgets();
+        };
     }
 
     private void resetOrder() {
@@ -863,15 +1315,17 @@ public class SectionColorsScreen extends Screen {
         List<ResourceLocation> ids = new ArrayList<>();
         Map<ResourceLocation, List<ResourceLocation>> byParent = new LinkedHashMap<>();
         for (SectionCatalog.Entry entry : pendingOrder) {
-            if (!entry.parent() && !entry.readOnly()) {
+            if (isOrderable(entry)) {
                 ids.add(entry.id());
-                byParent.computeIfAbsent(Config.parentFor(entry.id()), k -> new ArrayList<>()).add(entry.id());
+                byParent.computeIfAbsent(hubOf(entry.id()), k -> new ArrayList<>()).add(entry.id());
             }
         }
         Config.setSectionOrder(ids);
         for (Map.Entry<ResourceLocation, List<ResourceLocation>> e : byParent.entrySet()) {
             LiveColors.applyOrder(e.getKey(), e.getValue());
+            reorderStoredLayout(e.getKey(), e.getValue());
         }
+        TabLayoutStore.flush();
         refreshLiveTabLayout();
         orderDirty = false;
         pendingOrder = null;
@@ -879,11 +1333,19 @@ public class SectionColorsScreen extends Screen {
         Notice.show(Component.translatable("createaddonorganizer.colors.saved"), Notice.GREEN);
     }
 
-    private void refreshLiveTabLayout() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null) {
-            createaddonorganizer.refreshTabLayout(createaddonorganizerClient.currentDisplayParams(mc));
+    private void reorderStoredLayout(ResourceLocation parent, List<ResourceLocation> order) {
+        TabLayout layout = TabLayoutStore.byId(parent);
+        if (layout == null || layout.isCustom() || layout.sectionCount() == 0) {
+            return;
         }
+        TabLayout reordered = layout.withSectionsOrdered(order);
+        if (reordered != layout) {
+            TabLayoutStore.putQuiet(reordered);
+        }
+    }
+
+    private void refreshLiveTabLayout() {
+        createaddonorganizer.refreshTabLayout(ClientRegistries.displayParams());
     }
 
     private void confirmResetAll() {
@@ -896,19 +1358,54 @@ public class SectionColorsScreen extends Screen {
                 Component.translatable("createaddonorganizer.colors.resetAll.message")));
     }
 
+    private void confirmResetToPack() {
+        this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
+            if (confirmed) {
+                resetToPackDefaults();
+            }
+            this.minecraft.setScreen(this);
+        }, Component.translatable("createaddonorganizer.colors.resetPack.title"),
+                Component.translatable("createaddonorganizer.colors.resetPack.message")));
+    }
+
+    private void resetToPackDefaults() {
+        boolean changed = Config.resetToPackDefaults();
+        createaddonorganizer.organize(ClientRegistries.displayParams());
+        for (SectionCatalog.Entry entry : SectionCatalog.colorables()) {
+            if (entry.readOnly() || !PackDefaults.hasAnyFor(entry.id())) {
+                continue;
+            }
+            LiveColors.apply(entry.id(), Config.bannerColorFor(entry.id()));
+            LiveColors.applyTexture(entry.id(), BannerTextures.resolve(Config.bannerRefFor(entry.id())));
+            LiveColors.applyTextColor(entry.id(), Config.textColorFor(entry.id()));
+            LiveColors.applyTitle(entry.id(), entry.name());
+        }
+        refreshLiveTabLayout();
+        orderDirty = false;
+        pendingOrder = null;
+        rebuildWidgets();
+        Notice.show(Component.translatable(changed
+                ? "createaddonorganizer.colors.resetPack.done"
+                : "createaddonorganizer.colors.resetPack.nothing"), Notice.GREEN);
+    }
+
     private void resetAllSettings() {
         Config.resetAllToDefault();
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null) {
-            createaddonorganizer.organize(createaddonorganizerClient.currentDisplayParams(mc));
-        }
+        TabLayoutStore.resetAll();
+        AbsorbedTabs.IDS.clear();
+        createaddonorganizer.organize(ClientRegistries.displayParams());
         List<SectionCatalog.Entry> entries = SectionCatalog.colorables();
         for (SectionCatalog.Entry entry : entries) {
             if (entry.readOnly()) {
                 continue;
             }
-            LiveColors.apply(entry.id(), ColorSpec.solid(Config.DEFAULT_BANNER_COLOR.get()));
-            LiveColors.applyTextColor(entry.id(), ColorSpec.solid(Config.DEFAULT_TEXT_COLOR.get()));
+            if (!Config.isNativeSeeded(entry.id())) {
+                LiveColors.apply(entry.id(), ColorSpec.solid(Config.DEFAULT_BANNER_COLOR.get()));
+                LiveColors.applyTextColor(entry.id(), ColorSpec.solid(Config.DEFAULT_TEXT_COLOR.get()));
+            } else {
+                LiveColors.applyTexture(entry.id(), BannerTextures.resolve(Config.bannerRefFor(entry.id())));
+                LiveColors.applyTextColor(entry.id(), Config.textColorFor(entry.id()));
+            }
             LiveColors.applyTitle(entry.id(), entry.name());
         }
 
@@ -919,7 +1416,7 @@ public class SectionColorsScreen extends Screen {
                 applyAlphabeticalGroup(currentParent, group);
                 currentParent = entry.id();
                 group = new ArrayList<>();
-            } else if (!entry.readOnly()) {
+            } else if (isOrderable(entry)) {
                 group.add(entry);
             }
         }
@@ -946,34 +1443,7 @@ public class SectionColorsScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (!orderDirty) {
-            this.minecraft.setScreen(parent);
-            return;
-        }
-        this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
-            if (confirmed) {
-                saveOrder();
-            } else {
-                orderDirty = false;
-                pendingOrder = null;
-            }
-            this.minecraft.setScreen(parent);
-        }, Component.translatable("createaddonorganizer.colors.unsaved.title"),
-                Component.translatable("createaddonorganizer.colors.unsaved.message"),
-                Component.translatable("createaddonorganizer.colors.unsaved.save"),
-                Component.translatable("createaddonorganizer.colors.unsaved.discard")) {
-            @Override
-            public boolean shouldCloseOnEsc() {
-                return true;
-            }
-
-            @Override
-            public void onClose() {
-                SectionColorsScreen.this.orderDirty = false;
-                SectionColorsScreen.this.pendingOrder = null;
-                this.minecraft.setScreen(SectionColorsScreen.this.parent);
-            }
-        });
+        this.minecraft.setScreen(parent);
     }
 
     private class ColorList extends ContainerObjectSelectionList<ColorList.Row> {
@@ -987,36 +1457,40 @@ public class SectionColorsScreen extends Screen {
         private boolean renderingGhost;
         private double dragStartMouseY;
 
+        private final ListGlide glide = new ListGlide();
+
         private static final long SLIDE_MS = 130;
         private static final int GHOST_BG = 0xB0101016;
         private static final int GHOST_BORDER = 0x60FFFFFF;
-        private static final int EDGE_FADE_PX = 24;
         private static final int SUB_INDENT = 14;
         private static final int SUB_LINE_X = 6;
         private static final int SUB_LINE_FADE = 10;
+        private static final int PREVIEW_W = 48;
+        private static final int SLIVER_LINE_OVERLAP = 3;
+        private static final int PACK_TAG_COLOR = 0xFFB79CF0;
 
         ColorList(Minecraft mc, int width, int height, int top, int itemHeight) {
             super(mc, width, height, top, itemHeight);
             this.rowHeight = itemHeight;
         }
 
+        void jumpToSection(ResourceLocation id) {
+            List<Row> all = children();
+            for (int i = 0; i < all.size(); i++) {
+                Row row = all.get(i);
+                if (!row.sliver && row.data.id().equals(id)) {
+                    glide.beginScroll(this);
+                    setScrollAmount(i * (double) rowHeight);
+                    glide.endScroll(this);
+                    return;
+                }
+            }
+        }
+
         @Override
         public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            glide.beforeRender(this);
             super.renderWidget(g, mouseX, mouseY, partialTick);
-            int x1 = getX();
-            int x2 = getX() + getWidth();
-            int top = getY();
-            int bottom = getY() + getHeight();
-
-            g.pose().pushPose();
-            g.pose().translate(0, 0, 100);
-            if (getScrollAmount() > 0) {
-                g.fillGradient(x1, top, x2, top + EDGE_FADE_PX, 0x90000000, 0x00000000);
-            }
-            if (getScrollAmount() < getMaxScroll()) {
-                g.fillGradient(x1, bottom - EDGE_FADE_PX, x2, bottom, 0x00000000, 0x90000000);
-            }
-            g.pose().popPose();
 
             if (dragRow != null && dragActive) {
                 int left = getRowLeft();
@@ -1034,26 +1508,17 @@ public class SectionColorsScreen extends Screen {
             }
         }
 
-        void add(SectionCatalog.Entry entry) {
-            addEntry(new Row(entry));
-        }
-
         void setEntries(List<SectionCatalog.Entry> entries) {
             dragRow = null;
             dragActive = false;
-            replaceEntries(entries.stream().map(Row::new).toList());
-        }
-
-        Row findRow(ResourceLocation id) {
-            if (id == null) {
-                return null;
-            }
-            for (Row row : children()) {
-                if (row.data.id().equals(id)) {
-                    return row;
+            List<Row> rows = new ArrayList<>(entries.size());
+            for (SectionCatalog.Entry entry : entries) {
+                if (entry.parent()) {
+                    rows.add(new Row(entry, true));
                 }
+                rows.add(new Row(entry));
             }
-            return null;
+            replaceEntries(rows);
         }
 
         @Override
@@ -1061,31 +1526,47 @@ public class SectionColorsScreen extends Screen {
             return SectionColorsScreen.this.listRowWidth;
         }
 
+        @Override
+        protected int getScrollbarPosition() {
+            return this.getX() + this.getWidth() - 6;
+        }
+
         private ResourceLocation parentIdAt(int index) {
             for (int i = Math.min(index, children().size() - 1); i >= 0; i--) {
-                if (children().get(i).data.parent()) {
-                    return children().get(i).data.id();
+                Row row = children().get(i);
+                if (!row.sliver && row.data.parent()) {
+                    return row.data.id();
                 }
             }
             return null;
         }
 
-        private boolean isLastInGroup(int index) {
+        private boolean startsGroup(int index) {
             List<Row> all = children();
-            return index + 1 >= all.size() || all.get(index + 1).data.parent();
+            if (index >= all.size()) {
+                return true;
+            }
+            Row row = all.get(index);
+            return row.sliver || row.data.parent();
+        }
+
+        private boolean isLastInGroup(int index) {
+            return index + 1 >= children().size() || startsGroup(index + 1);
         }
 
         private int minNonNativeInsertIndex(ResourceLocation parent) {
             List<Row> all = children();
             int start = 0;
             for (int i = 0; i < all.size(); i++) {
-                if (all.get(i).data.parent() && all.get(i).data.id().equals(parent)) {
+                if (!all.get(i).sliver && all.get(i).data.parent() && all.get(i).data.id().equals(parent)) {
                     start = i + 1;
                     break;
                 }
             }
             int i = start;
-            while (i < all.size() && !all.get(i).data.parent() && all.get(i).data.readOnly()) {
+            while (i < all.size() && !startsGroup(i)
+                    && (all.get(i).data.readOnly() || all.get(i).data.tabOwned()
+                            || SectionCatalog.isModDrawn(all.get(i).data.id()))) {
                 i++;
             }
             return i;
@@ -1096,13 +1577,20 @@ public class SectionColorsScreen extends Screen {
             int slot = Math.round((ghostTop(mouseY) - getRowTop(0)) / (float) rowHeight);
             slot = Mth.clamp(slot, 0, all.size() - 1);
             int insertPos;
-            if (all.get(slot).data.parent() || slot > dragFromIndex) {
+            if (startsGroup(slot) || slot > dragFromIndex) {
                 insertPos = slot + 1;
             } else {
                 insertPos = slot;
             }
-            dragTargetParent = parentIdAt(insertPos - 1);
-            insertPos = Math.max(insertPos, minNonNativeInsertIndex(dragTargetParent));
+            ResourceLocation landingParent = parentIdAt(insertPos - 1);
+            if (dragRow != null && boundToGroup(dragRow.data)
+                    && !Objects.equals(landingParent, parentIdAt(dragFromIndex))) {
+                return;
+            }
+            dragTargetParent = landingParent;
+            if (dragRow == null || !boundToGroup(dragRow.data)) {
+                insertPos = Math.max(insertPos, minNonNativeInsertIndex(dragTargetParent));
+            }
             dragTargetIndex = insertPos;
             updateSlideTargets();
         }
@@ -1126,10 +1614,20 @@ public class SectionColorsScreen extends Screen {
 
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            glide.beginScroll(this);
             boolean handled = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            glide.endScroll(this);
             if (dragRow != null) {
                 retarget(mouseY);
             }
+            return handled;
+        }
+
+        @Override
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            glide.endScroll(this);
             return handled;
         }
 
@@ -1137,7 +1635,7 @@ public class SectionColorsScreen extends Screen {
             for (Row row : children()) {
                 if (row.data.id().equals(id)) {
                     row.data = new SectionCatalog.Entry(id, title, row.data.parent(), row.data.readOnly(),
-                            row.data.nativeTextColor(), row.data.nativeSecondaryTextColor());
+                            row.data.nativeTextColor(), row.data.nativeSecondaryTextColor(), row.data.tabOwned());
                 }
             }
         }
@@ -1156,12 +1654,12 @@ public class SectionColorsScreen extends Screen {
             while (i < all.size()) {
                 int start = i + 1;
                 int end = start;
-                while (end < all.size() && !all.get(end).data.parent()) {
+                while (end < all.size() && !startsGroup(end)) {
                     end++;
                 }
                 List<Integer> sortableIndices = new ArrayList<>();
                 for (int k = start; k < end; k++) {
-                    if (!all.get(k).data.readOnly()) {
+                    if (isOrderable(all.get(k).data)) {
                         sortableIndices.add(k);
                     }
                 }
@@ -1180,7 +1678,9 @@ public class SectionColorsScreen extends Screen {
 
         private class Row extends ContainerObjectSelectionList.Entry<Row> {
             private SectionCatalog.Entry data;
+            private final boolean sliver;
             private final Button edit;
+            private final Button tab;
             private float slideFrom;
             private int slideTarget;
             private long slideStart;
@@ -1207,15 +1707,89 @@ public class SectionColorsScreen extends Screen {
             }
 
             Row(SectionCatalog.Entry entry) {
+                this(entry, false);
+            }
+
+            Row(SectionCatalog.Entry entry, boolean sliver) {
                 this.data = entry;
-                this.edit = entry.readOnly() || !SectionColorsScreen.this.classic ? null
-                        : Button.builder(Component.translatable("createaddonorganizer.colors.edit"),
-                                        b -> SectionColorsScreen.this.openEditor(data))
-                                .size(44, 20).build();
+                this.sliver = sliver;
+                if (sliver) {
+                    this.edit = MenuSkin.markEdit(
+                            Button.builder(Component.translatable("createaddonorganizer.colors.edit"),
+                                            b -> SectionColorsScreen.this.openHighlightEditor(data.id(),
+                                                    tabTitle()))
+                                    .size(44, 20).build());
+                } else {
+                    this.edit = entry.readOnly() ? null
+                            : MenuSkin.markEdit(Button.builder(Component.translatable("createaddonorganizer.colors.edit"),
+                                            b -> SectionColorsScreen.this.openEditor(data))
+                                    .size(44, 20).build());
+                }
+                this.tab = !sliver && !entry.readOnly() && !SectionColorsScreen.this.classic
+                        && BannerEditor.isEditableInTabCreator(entry.id())
+                                ? Button.builder(Component.translatable("createaddonorganizer.colors.panel.tabCreator"),
+                                                b -> BannerEditor.openInTabCreator(SectionColorsScreen.this, data.id()))
+                                        .size(34, 20).build()
+                                : null;
+            }
+
+            private Component tabTitle() {
+                Component override = TabLayoutStore.nameOverride(data.id());
+                return override != null ? override : data.name();
+            }
+
+            private void renderSliver(GuiGraphics g, int left, int top, int rowWidth, int rowHeight,
+                    int mouseX, int mouseY, float alpha) {
+                Integer highlight = Config.highlightColorFor(data.id());
+                int accent = highlight != null ? (0xFF000000 | (highlight & 0x00FFFFFF)) : GlassSkin.accent();
+
+                int widgetY = top + (rowHeight - 20) / 2;
+                int actionX = left + rowWidth;
+                if (edit != null) {
+                    edit.setX(left + rowWidth - edit.getWidth());
+                    edit.setY(widgetY);
+                    actionX = edit.getX();
+                }
+
+                if (SectionColorsScreen.this.classic) {
+                    int band = highlight != null ? (0x2A << 24) | (highlight & 0x00FFFFFF)
+                            : MenuSkin.accent(0x2AFFFFFF);
+                    int divider = highlight != null ? (0x60 << 24) | (highlight & 0x00FFFFFF)
+                            : MenuSkin.accent(0x60FFFFFF);
+                    g.fill(left, top, left + rowWidth, top + rowHeight, mulAlpha(band, alpha));
+                    g.fill(left, top, left + rowWidth, top + 1, mulAlpha(divider, alpha));
+                    int bandTextY = top + (rowHeight - 8) / 2;
+                    int bandNameX = left + PREVIEW_W + 8;
+                    g.drawString(font, boldFitting(tabTitle().getString(), actionX - 10 - bandNameX), bandNameX,
+                            bandTextY, mulAlpha(0xFFFFFFFF, alpha), false);
+                } else {
+                    Component label = boldFitting(tabTitle().getString(), Math.max(0, actionX - 10 - left));
+                    TwoToneText.draw(g, font, label, left, top + rowHeight - 14, mulAlpha(accent, alpha),
+                            mulAlpha(MenuSkin.mixColor(accent, 0xFF000000, HEADER_TONE), alpha),
+                            5f / 9f, GlassSkin.shadow());
+                }
+
+                if (!ColorList.this.renderingGhost) {
+                    int lineColor = highlight != null ? (0x90 << 24) | (highlight & 0x00FFFFFF)
+                            : MenuSkin.accent(0x90FFFFFF);
+                    int lineX = left + SUB_LINE_X;
+                    int lineTop = top + rowHeight - SLIVER_LINE_OVERLAP;
+                    int gapToNext = ColorList.this.rowHeight - rowHeight;
+                    g.fill(lineX, lineTop, lineX + 2, top + rowHeight + gapToNext, mulAlpha(lineColor, alpha));
+                }
+
+                if (edit != null && !ColorList.this.renderingGhost) {
+                    edit.setAlpha(Math.max(alpha, 0.04f));
+                    edit.render(g, mouseX, mouseY, 0f);
+                }
             }
 
             private void deleteViaShift() {
                 ResourceLocation id = data.id();
+                if (LiveColors.isAdoptedNative(id)) {
+                    releaseNativeSection();
+                    return;
+                }
                 boolean wasForceIncluded = Config.isForceIncluded(id);
                 ResourceLocation priorRoute = Config.parentFor(id);
                 TabManager.deleteSectionConfig(id);
@@ -1229,11 +1803,29 @@ public class SectionColorsScreen extends Screen {
                     SectionColorsScreen.this.selectedEntry = null;
                     lastSelectedId = null;
                 }
-                SectionColorsScreen.this.updateCountLine();
                 SectionColorsScreen.this.lastUndo = () -> {
                     TabManager.restoreSectionConfig(id, wasForceIncluded, priorRoute);
                     SectionColorsScreen.this.rebuildWidgets();
                 };
+            }
+
+            private void releaseNativeSection() {
+                ResourceLocation id = data.id();
+                LiveColors.releaseNative(id);
+                SectionColorsScreen.this.lastUndo = () -> {
+                    LiveColors.readoptNative(id);
+                    SectionColorsScreen.this.rebuildWidgets();
+                };
+                if (id.equals(SectionColorsScreen.this.selectedId)) {
+                    SectionColorsScreen.this.selectedId = null;
+                    SectionColorsScreen.this.selectedEntry = null;
+                    lastSelectedId = null;
+                }
+                SectionColorsScreen.this.orderDirty = false;
+                SectionColorsScreen.this.pendingOrder = null;
+                SectionColorsScreen.this.rebuildWidgets();
+                Notice.show(Component.translatable("createaddonorganizer.colors.native.released", data.name()),
+                        Notice.GREEN);
             }
 
             private boolean isDeletableHub() {
@@ -1262,10 +1854,7 @@ public class SectionColorsScreen extends Screen {
                     Config.addForceExclude(id);
                 }
                 Config.clearRoutesTo(id);
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.level != null && mc.player != null) {
-                    createaddonorganizer.reapplyAbsorption(createaddonorganizerClient.currentDisplayParams(mc));
-                }
+                createaddonorganizer.reapplyAbsorption(ClientRegistries.displayParams());
                 SectionColorsScreen.this.orderDirty = false;
                 SectionColorsScreen.this.pendingOrder = null;
 
@@ -1278,10 +1867,7 @@ public class SectionColorsScreen extends Screen {
                     for (ResourceLocation subId : routedHere) {
                         Config.setRoute(subId, id);
                     }
-                    Minecraft mc2 = Minecraft.getInstance();
-                    if (mc2.level != null && mc2.player != null) {
-                        createaddonorganizer.reapplyAbsorption(createaddonorganizerClient.currentDisplayParams(mc2));
-                    }
+                    createaddonorganizer.reapplyAbsorption(ClientRegistries.displayParams());
                     SectionColorsScreen.this.rebuildWidgets();
                 };
 
@@ -1290,16 +1876,46 @@ public class SectionColorsScreen extends Screen {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return edit != null ? List.of(edit) : List.of();
+                return widgets();
+            }
+
+            private List<AbstractWidget> widgets() {
+                if (edit == null && tab == null) {
+                    return List.of();
+                }
+                if (tab == null) {
+                    return List.of(edit);
+                }
+                return edit == null ? List.of(tab) : List.of(tab, edit);
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return edit != null ? List.of(edit) : List.of();
+                return widgets();
             }
 
             @Override
             public boolean mouseClicked(double mouseX, double mouseY, int button) {
+                if (sliver) {
+                    if (button != 0) {
+                        return false;
+                    }
+                    if (super.mouseClicked(mouseX, mouseY, button)) {
+                        return true;
+                    }
+                    if (Screen.hasControlDown()) {
+                        SectionColorsScreen.this.openTabRename(data);
+                        return true;
+                    }
+                    boolean again = data.id().equals(SectionColorsScreen.this.lastClickId)
+                            && System.currentTimeMillis() - SectionColorsScreen.this.lastClickMillis < DOUBLE_CLICK_MS;
+                    SectionColorsScreen.this.lastClickId = data.id();
+                    SectionColorsScreen.this.lastClickMillis = System.currentTimeMillis();
+                    if (again) {
+                        SectionColorsScreen.this.openTabRename(data);
+                    }
+                    return true;
+                }
                 if (super.mouseClicked(mouseX, mouseY, button)) {
                     return true;
                 }
@@ -1319,7 +1935,7 @@ public class SectionColorsScreen extends Screen {
                 if (data.readOnly()) {
                     return false;
                 }
-                if (button == 0 && Screen.hasShiftDown() && !data.parent()) {
+                if (button == 0 && Screen.hasShiftDown() && !data.parent() && !data.tabOwned()) {
                     deleteViaShift();
                     return true;
                 }
@@ -1331,7 +1947,8 @@ public class SectionColorsScreen extends Screen {
                     SectionColorsScreen.this.startRename(data);
                     return true;
                 }
-                if (button == 0 && !data.parent() && SectionColorsScreen.this.searchQuery.trim().isEmpty()) {
+                if (button == 0 && isOrderable(data)
+                        && SectionColorsScreen.this.searchQuery.trim().isEmpty()) {
                     dragRow = this;
                     dragFromIndex = dragTargetIndex = ColorList.this.children().indexOf(this);
                     ColorList.this.dragTargetParent = ColorList.this.parentIdAt(dragFromIndex);
@@ -1398,16 +2015,9 @@ public class SectionColorsScreen extends Screen {
             }
 
             private void moveToHub(ResourceLocation newParent) {
-                if (createaddonorganizer.CREATE_BASE.equals(newParent)) {
-                    Config.clearRoute(data.id());
-                } else {
-                    Config.setRoute(data.id(), newParent);
-                }
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.level != null && mc.player != null) {
-                    LiveColors.moveToParent(data.id(), newParent);
-                    createaddonorganizer.refreshTabLayout(createaddonorganizerClient.currentDisplayParams(mc));
-                }
+                Config.routeTo(data.id(), newParent);
+                LiveColors.moveToParent(data.id(), newParent);
+                createaddonorganizer.refreshTabLayout(ClientRegistries.displayParams());
                 SectionColorsScreen.this.markOrderDirty();
             }
 
@@ -1422,37 +2032,29 @@ public class SectionColorsScreen extends Screen {
                     top += Math.round(slideOffset());
                 }
 
-                float alpha = animationDone() ? 1f : rowAlpha(index);
-
-                if (!ColorList.this.renderingGhost) {
-                    int listTop = ColorList.this.getY();
-                    int listBottom = ColorList.this.getBottom();
-                    float edgeFade = 1f;
-                    if (ColorList.this.getScrollAmount() > 0 && top < listTop + EDGE_FADE_PX) {
-                        edgeFade = Mth.clamp((top + rowHeight - listTop) / (float) EDGE_FADE_PX, 0f, 1f);
-                    }
-                    if (ColorList.this.getScrollAmount() < ColorList.this.getMaxScroll() && top + rowHeight > listBottom - EDGE_FADE_PX) {
-                        edgeFade = Math.min(edgeFade, Mth.clamp((listBottom - top) / (float) EDGE_FADE_PX, 0f, 1f));
-                    }
-                    alpha *= edgeFade;
-                }
+                float alpha = 1f;
 
                 if (alpha <= 0.03f) {
                     return;
                 }
 
-                if (data.parent()) {
-                    Integer highlight = Config.highlightColorFor(data.id());
-                    int band = highlight != null ? (0x2A << 24) | (highlight & 0x00FFFFFF) : 0x2AFFFFFF;
-                    int divider = highlight != null ? (0x60 << 24) | (highlight & 0x00FFFFFF) : 0x60FFFFFF;
-                    g.fill(left, top, left + rowWidth, top + rowHeight, mulAlpha(band, alpha));
-                    if (index != 0) {
-                        g.fill(left, top, left + rowWidth, top + 1, mulAlpha(divider, alpha));
-                    }
-                } else if (!ColorList.this.renderingGhost) {
+                if (sliver) {
+                    renderSliver(g, left, top, rowWidth, rowHeight, mouseX, mouseY, alpha);
+                    return;
+                }
+
+                if (!ColorList.this.renderingGhost && !SectionColorsScreen.this.classic
+                        && data.id().equals(SectionColorsScreen.this.selectedId)) {
+                    int selAccent = GlassSkin.accent();
+                    g.fill(left, top, left + rowWidth, top + rowHeight, MenuSkin.fade(selAccent, 0.14f));
+                    g.fill(left, top, left + 2, top + rowHeight, selAccent);
+                }
+
+                if (!ColorList.this.renderingGhost) {
                     ResourceLocation groupParent = ColorList.this.parentIdAt(index);
                     Integer highlight = groupParent != null ? Config.highlightColorFor(groupParent) : null;
-                    int lineColor = highlight != null ? (0x90 << 24) | (highlight & 0x00FFFFFF) : 0x50FFFFFF;
+                    int lineColor = highlight != null ? (0x90 << 24) | (highlight & 0x00FFFFFF)
+                            : MenuSkin.accent(0x90FFFFFF);
                     int lineX = left + SUB_LINE_X;
                     int lineBottom = top + rowHeight;
                     int gapToNext = ColorList.this.rowHeight - rowHeight;
@@ -1469,13 +2071,12 @@ public class SectionColorsScreen extends Screen {
                     }
                 }
 
-
-                int contentLeft = data.parent() ? left : left + SUB_INDENT;
+                int contentLeft = left + SUB_INDENT;
 
                 int textY = top + (rowHeight - 8) / 2;
 
                 if (data.readOnly()) {
-                    int previewW = 48;
+                    int previewW = PREVIEW_W;
                     int phantomEditX = left + rowWidth - 44;
                     String tag = Component.translatable("createaddonorganizer.colors.native").getString();
                     int tagX = phantomEditX - 10 - font.width(tag);
@@ -1489,7 +2090,7 @@ public class SectionColorsScreen extends Screen {
                     return;
                 }
 
-                int previewW = 48;
+                int previewW = PREVIEW_W;
                 String previewTooltip;
                 int previewX1;
                 int previewY1;
@@ -1502,11 +2103,9 @@ public class SectionColorsScreen extends Screen {
                     g.fill(contentLeft - 1, ty - 1, contentLeft + previewW + 1, ty + th + 1, mulAlpha(0xFF000000, alpha));
                     ResourceLocation tex = BannerTextures.resolve(bannerRef);
                     if (tex != null) {
-
-                        int texHeight = BannerAnimation.preview(tex, false, 1)
-                                .map(BannerAnimation.AnimInfo::frameCount).orElse(1) * BannerTextures.HEIGHT;
                         g.setColor(1f, 1f, 1f, alpha);
-                        BannerTextures.blitCropped(g, tex, contentLeft, ty, previewW, th, texHeight);
+                        BannerTextures.blitCropped(g, tex, contentLeft, ty, previewW, th,
+                                BannerAnimation.sheetHeight(tex));
                         g.setColor(1f, 1f, 1f, 1f);
                     }
                     previewTooltip = Component.translatable("createaddonorganizer.banner.mode.image").getString();
@@ -1528,8 +2127,13 @@ public class SectionColorsScreen extends Screen {
                     previewY2 = sy + swatch;
                 }
 
-                if (mouseX >= previewX1 && mouseX < previewX2 && mouseY >= previewY1 && mouseY < previewY2) {
-                    SectionColorsScreen.this.hoverPreviewTooltip = Component.literal(previewTooltip);
+                if (!ColorList.this.renderingGhost && mouseX >= previewX1 && mouseX < previewX2
+                        && mouseY >= previewY1 && mouseY < previewY2) {
+                    if (SectionColorsScreen.this.classic) {
+                        SectionColorsScreen.this.hoverPreviewTooltip = Component.literal(previewTooltip);
+                    } else {
+                        SectionColorsScreen.this.popupEntry = data;
+                    }
                 }
 
                 int widgetY = top + (rowHeight - 20) / 2;
@@ -1538,6 +2142,11 @@ public class SectionColorsScreen extends Screen {
                     edit.setX(left + rowWidth - edit.getWidth());
                     edit.setY(widgetY);
                     actionX = edit.getX();
+                }
+                if (tab != null) {
+                    tab.setX(actionX - 2 - tab.getWidth());
+                    tab.setY(widgetY);
+                    actionX = tab.getX();
                 }
                 int nameX = contentLeft + previewW + 8;
 
@@ -1556,7 +2165,14 @@ public class SectionColorsScreen extends Screen {
                     renameConfirm.render(g, mouseX, mouseY, partialTick);
                     renameCancel.render(g, mouseX, mouseY, partialTick);
                 } else {
-                    int nameMaxWidth = actionX - 10 - nameX;
+                    int tagRoom = 0;
+                    if (PackDefaults.hasAnyFor(data.id())) {
+                        String tag = Component.translatable("createaddonorganizer.colors.pack").getString();
+                        tagRoom = font.width(tag) + 6;
+                        g.drawString(font, tag, actionX - 10 - font.width(tag), textY,
+                                mulAlpha(PACK_TAG_COLOR, alpha));
+                    }
+                    int nameMaxWidth = actionX - 10 - nameX - tagRoom;
                     Component name = truncatedName(data, nameMaxWidth);
                     ColorSpec primary = mulAlphaSpec(previewTextColor(data.id()), alpha);
                     ColorSpec secondary = previewTextSecondaryColor(data.id());
@@ -1571,6 +2187,10 @@ public class SectionColorsScreen extends Screen {
                             outline != null ? mulAlphaSpec(outline, alpha) : null);
                 }
 
+                if (tab != null) {
+                    tab.setAlpha(Math.max(alpha, 0.04f));
+                    tab.render(g, mouseX, mouseY, partialTick);
+                }
                 if (edit != null) {
                     edit.setAlpha(Math.max(alpha, 0.04f));
                     edit.render(g, mouseX, mouseY, partialTick);
@@ -1581,8 +2201,26 @@ public class SectionColorsScreen extends Screen {
                 }
             }
 
+            private Component boldFitting(String name, int maxWidth) {
+                Component bold = Component.literal(name).withStyle(ChatFormatting.BOLD);
+                if (font.width(bold) <= maxWidth) {
+                    return bold;
+                }
+                String trimmed = name;
+                while (!trimmed.isEmpty()
+                        && font.width(Component.literal(trimmed).withStyle(ChatFormatting.BOLD)) > maxWidth) {
+                    trimmed = trimmed.substring(0, trimmed.length() - 1);
+                }
+                return Component.literal(trimmed).withStyle(ChatFormatting.BOLD);
+            }
+
             private Component truncatedName(SectionCatalog.Entry entry, int maxWidth) {
                 String full = entry.name().getString();
+                if (full.isBlank()) {
+                    Component placeholder = Component.literal(entry.id().toString())
+                            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC);
+                    return placeholder;
+                }
                 Component base;
                 if (font.width(full) <= maxWidth) {
                     base = entry.name();
@@ -1591,9 +2229,17 @@ public class SectionColorsScreen extends Screen {
                     int budget = Math.max(0, maxWidth - font.width(ellipsis));
                     base = Component.literal(font.plainSubstrByWidth(full, budget) + ellipsis);
                 }
-                return entry.parent() ? base.copy().withStyle(ChatFormatting.BOLD) : base;
+                return base;
             }
         }
+    }
+
+    private static int iconOffsetX(int width, int icon) {
+        return Math.round((width - icon) / 2f);
+    }
+
+    private static int iconOffsetY(int height, int icon) {
+        return BUTTON_FACE_TOP + Math.round((height - BUTTON_FACE_TOP - BUTTON_FACE_BOTTOM - icon) / 2f);
     }
 
     private static class HeartButton extends Button {
@@ -1608,8 +2254,8 @@ public class SectionColorsScreen extends Screen {
         @Override
         public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.renderWidget(g, mouseX, mouseY, partialTick);
-            int ix = getX() + (getWidth() - ICON_SIZE) / 2 + 1;
-            int iy = getY() + (getHeight() - ICON_SIZE) / 2 + 1;
+            int ix = getX() + iconOffsetX(getWidth(), ICON_SIZE);
+            int iy = getY() + iconOffsetY(getHeight(), ICON_SIZE);
 
             RenderSystem.enableBlend();
             g.setColor(0f, 0f, 0f, this.alpha);
@@ -1623,4 +2269,28 @@ public class SectionColorsScreen extends Screen {
             g.setColor(1f, 1f, 1f, 1f);
         }
     }
+
+    private static class BugButton extends Button {
+        private static final ResourceLocation BUG_ICON = ResourceLocation.fromNamespaceAndPath(
+                createaddonorganizer.MODID, "textures/gui/bug.png");
+        private static final int ICON_SIZE = 13;
+
+        BugButton(int x, int y, int size, OnPress onPress) {
+            super(x, y, size, size, Component.empty(), onPress, DEFAULT_NARRATION);
+            setTooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.bugReport")));
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.renderWidget(g, mouseX, mouseY, partialTick);
+            int ix = getX() + iconOffsetX(getWidth(), ICON_SIZE);
+            int iy = getY() + iconOffsetY(getHeight(), ICON_SIZE);
+
+            RenderSystem.enableBlend();
+            g.setColor(1f, 1f, 1f, this.alpha);
+            g.blit(BUG_ICON, ix, iy, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            g.setColor(1f, 1f, 1f, 1f);
+        }
+    }
 }
+

@@ -69,10 +69,14 @@ public final class ColorUtil {
         int r = (argb >> 16) & 0xFF;
         int g = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
-        r = (int) (r + (255 - r) * factor);
-        g = (int) (g + (255 - g) * factor);
-        b = (int) (b + (255 - b) * factor);
+        r = clamp255(r + (255 - r) * factor);
+        g = clamp255(g + (255 - g) * factor);
+        b = clamp255(b + (255 - b) * factor);
         return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    private static int clamp255(float value) {
+        return Math.max(0, Math.min(255, Math.round(value)));
     }
 
     private static int channel(float f) {

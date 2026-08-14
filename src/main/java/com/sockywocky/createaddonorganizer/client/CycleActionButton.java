@@ -1,15 +1,30 @@
 package com.sockywocky.createaddonorganizer.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
-final class CycleActionButton extends Button {
+final class CycleActionButton extends GlassButton {
+    private final Runnable onForward;
     private final Runnable onBackward;
 
     CycleActionButton(int x, int y, int width, int height, Component message, Runnable onForward, Runnable onBackward) {
-        super(x, y, width, height, message, b -> onForward.run(), DEFAULT_NARRATION);
+        super(x, y, width, height, message, b -> onForward.run());
+        this.onForward = onForward;
         this.onBackward = onBackward;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (!this.active || !this.visible || scrollY == 0 || !this.isMouseOver(mouseX, mouseY)) {
+            return false;
+        }
+        this.playDownSound(Minecraft.getInstance().getSoundManager());
+        if (scrollY > 0) {
+            onForward.run();
+        } else {
+            onBackward.run();
+        }
+        return true;
     }
 
     @Override

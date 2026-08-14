@@ -27,6 +27,9 @@ public final class BannerPools {
     private static final ResourceLocation RESOURCE =
             ResourceLocation.fromNamespaceAndPath(createaddonorganizer.MODID, "banner_pools.json");
 
+    private static Map<String, List<String>> cached;
+    private static Map<String, List<String>> remoteAtLoad;
+
     private BannerPools() {}
 
     public static List<String> poolFor(ResourceLocation tabId) {
@@ -34,7 +37,24 @@ public final class BannerPools {
         return refs != null ? refs : List.of();
     }
 
+    public static void invalidate() {
+        cached = null;
+        remoteAtLoad = null;
+    }
+
     private static Map<String, List<String>> load() {
+        Map<String, List<String>> remote = RemoteBannerPools.hasEverCached()
+                ? RemoteBannerPools.poolsSnapshot()
+                : null;
+        if (cached != null && remoteAtLoad == remote) {
+            return cached;
+        }
+        remoteAtLoad = remote;
+        cached = read();
+        return cached;
+    }
+
+    private static Map<String, List<String>> read() {
         Map<String, List<String>> fromSource = loadFromDevFile();
         if (fromSource != null) {
             return fromSource;
@@ -46,7 +66,7 @@ public final class BannerPools {
                 Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
             Map<String, List<String>> data = GSON.fromJson(reader, MAP_TYPE);
             return data != null ? data : Map.of();
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             return Map.of();
         }
     }
@@ -59,7 +79,7 @@ public final class BannerPools {
         try (Reader reader = Files.newBufferedReader(devFile, StandardCharsets.UTF_8)) {
             Map<String, List<String>> data = GSON.fromJson(reader, MAP_TYPE);
             return data != null ? data : Map.of();
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             return null;
         }
     }
@@ -93,12 +113,16 @@ public final class BannerPools {
         try (Writer writer = Files.newBufferedWriter(devFile, StandardCharsets.UTF_8)) {
             new GsonBuilder().setPrettyPrinting().create().toJson(data, writer);
         }
+        invalidate();
     }
 
     private static Path resolveDevFile() {
         Path cwd = Path.of("").toAbsolutePath();
         Path projectRoot = cwd.getParent();
-        return projectRoot == null ? null
-                : projectRoot.resolve("src/main/resources/assets/createaddonorganizer/banner_pools.json");
+        if (projectRoot == null || !Files.isDirectory(projectRoot.resolve("src/main/resources"))) {
+            return null;
+        }
+        return projectRoot.resolve("src/main/resources/assets/createaddonorganizer/banner_pools.json");
     }
 }
+

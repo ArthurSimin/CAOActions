@@ -1,6 +1,7 @@
 package com.sockywocky.createaddonorganizer.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.sockywocky.createaddonorganizer.Config;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 import com.wdiscute.utils.ScreenUtils;
 
@@ -45,7 +46,12 @@ public final class TwoToneText {
 
     public static void draw(GuiGraphics g, Font font, Component text, int x, int y, int primaryArgb, int secondaryArgb,
             float splitFraction) {
-        g.drawString(font, text, x, y, primaryArgb, true);
+        draw(g, font, text, x, y, primaryArgb, secondaryArgb, splitFraction, true);
+    }
+
+    public static void draw(GuiGraphics g, Font font, Component text, int x, int y, int primaryArgb, int secondaryArgb,
+            float splitFraction, boolean shadow) {
+        g.drawString(font, text, x, y, primaryArgb, shadow);
         int w = font.width(text);
         int splitY = y + Math.round(font.lineHeight * splitFraction);
         g.pose().pushPose();
@@ -78,12 +84,37 @@ public final class TwoToneText {
         if (secondary != null) {
             int w = scroll ? available : font.width(text);
             int splitY = y + Math.round(font.lineHeight * splitFraction);
+            reportSecondaryOnce(text, x, y, splitY, w, font.lineHeight, scroll, secondary);
             g.pose().pushPose();
             g.pose().translate(0, 0, 1);
             beginScissor(g, x, splitY, x + w, y + font.lineHeight);
             drawPass(g, font, text, x, y, maxX, secondary, false, scroll);
             endScissor(g);
             g.pose().popPose();
+        } else {
+            reportNoSecondaryOnce(text);
+        }
+    }
+
+    private static final java.util.Set<String> SECONDARY_REPORTED = new java.util.HashSet<>();
+
+    private static void reportSecondaryOnce(Component text, int x, int y, int splitY, int w, int lineHeight,
+            boolean scroll, ColorSpec secondary) {
+        if (!Config.bannerDrawDiagnostics() || !SECONDARY_REPORTED.add("2t:" + text.getString())) {
+            return;
+        }
+        var window = net.minecraft.client.Minecraft.getInstance().getWindow();
+        createaddonorganizer.LOGGER.info("[CAO] twoTone \"{}\": scissor=({},{})-({},{}) lineHeight={} scroll={}"
+                        + " gradient={} colour={} window={}x{} scale={} target={}",
+                text.getString(), x, splitY, x + w, y + lineHeight, lineHeight, scroll,
+                secondary.isGradient(), Integer.toHexString(secondary.color1()),
+                window.getWidth(), window.getHeight(), window.getGuiScale(), renderTargetActive());
+    }
+
+    private static void reportNoSecondaryOnce(Component text) {
+        if (Config.bannerDrawDiagnostics() && SECONDARY_REPORTED.add("no2t:" + text.getString())) {
+            createaddonorganizer.LOGGER.info("[CAO] twoTone \"{}\": no secondary colour, drawing flat",
+                    text.getString());
         }
     }
 
@@ -158,7 +189,7 @@ public final class TwoToneText {
         int lineHeight = font.lineHeight;
         int w = font.width(text);
         for (int band = 0; band < VERTICAL_BANDS; band++) {
-            float fracY = VERTICAL_BANDS <= 1 ? 0f : (float) band / (VERTICAL_BANDS - 1);
+            float fracY = (float) band / (VERTICAL_BANDS - 1);
             int bandTop = y + lineHeight * band / VERTICAL_BANDS;
             int bandBottom = y + lineHeight * (band + 1) / VERTICAL_BANDS;
             g.pose().pushPose();
@@ -194,6 +225,7 @@ public final class TwoToneText {
     }
 
     public static void beginScissor(GuiGraphics g, int x1, int y1, int x2, int y2) {
+        g.flush();
         if (targetHeight != null) {
             enableTargetScissor(x1, y1, x2, y2);
         } else {
@@ -202,6 +234,7 @@ public final class TwoToneText {
     }
 
     public static void endScissor(GuiGraphics g) {
+        g.flush();
         if (targetHeight != null) {
             RenderSystem.disableScissor();
         } else {
@@ -218,3 +251,4 @@ public final class TwoToneText {
         RenderSystem.enableScissor((int) px, (int) py, Math.max(0, (int) pw), Math.max(0, (int) ph));
     }
 }
+

@@ -4,17 +4,28 @@ import java.io.IOException;
 
 import com.sockywocky.createaddonorganizer.client.Presets.PresetData;
 import com.sockywocky.createaddonorganizer.client.Presets.PresetRef;
+import com.sockywocky.createaddonorganizer.Config;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class PresetEditScreen extends Screen {
+    private static final int PAD = 10;
+    private static final int HEADER_H = 18;
+    private static final int FOOTER_GAP = 6;
+
     private final Screen parent;
     private final PresetRef ref;
+
+    private int chromeX;
+    private int chromeY;
+    private int chromeW;
+    private int chromeH;
+    private int headerY;
+    private int dividerY;
 
     public PresetEditScreen(Screen parent, PresetRef ref) {
         super(Component.literal(ref.name()));
@@ -24,35 +35,42 @@ public class PresetEditScreen extends Screen {
 
     @Override
     protected void init() {
-        int x = this.width / 2 - 100;
-        int y = this.height / 2 - 50;
+        int panelW = MenuLayout.panelWidth(this.width);
+        int panelX = MenuLayout.panelX(this.width);
+        boolean canSave = !ref.builtin() || DevMode.isUnlocked();
+        boolean canDelete = !ref.builtin();
+        int actions = 2 + (canSave ? 1 : 0) + (canDelete ? 1 : 0);
 
-        addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets.apply"), b -> apply())
-                .bounds(x, y, 200, 20).build());
-        y += 24;
+        chromeW = panelW + PAD * 2;
+        chromeH = PAD * 2 + HEADER_H + actions * (MenuLayout.ROW_H + MenuLayout.GAP)
+                + FOOTER_GAP + MenuLayout.ROW_H;
+        chromeX = panelX - PAD;
+        chromeY = (this.height - chromeH) / 2;
+        headerY = chromeY + PAD;
 
-        addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets.export"), b -> exportPreset())
-                .bounds(x, y, 200, 20).build());
-        y += 24;
-
-        if (!ref.builtin()) {
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets.saveCurrent"),
-                            b -> saveCurrent())
-                    .bounds(x, y, 200, 20).build());
-            y += 24;
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets.delete"),
-                            b -> confirmDelete())
-                    .bounds(x, y, 200, 20).build());
-            y += 24;
-        } else if (DevMode.isUnlocked()) {
-            addRenderableWidget(Button.builder(Component.translatable("createaddonorganizer.colors.presets.saveCurrent"),
-                            b -> saveCurrent())
-                    .bounds(x, y, 200, 20).build());
-            y += 24;
+        int y = headerY + HEADER_H;
+        y = action(y, panelX, panelW, "createaddonorganizer.colors.presets.apply", this::apply,
+                GlassButton.Style.BOX);
+        y = action(y, panelX, panelW, "createaddonorganizer.colors.presets.export", this::exportPreset,
+                GlassButton.Style.BOX);
+        if (canSave) {
+            y = action(y, panelX, panelW, "createaddonorganizer.colors.presets.saveCurrent", this::saveCurrent,
+                    GlassButton.Style.BOX);
+        }
+        if (canDelete) {
+            y = action(y, panelX, panelW, "createaddonorganizer.colors.presets.delete", this::confirmDelete,
+                    GlassButton.Style.DANGER);
         }
 
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-                .bounds(x, y + 6, 200, 20).build());
+        dividerY = y + 2;
+        addRenderableWidget(new GlassButton(panelX, y + FOOTER_GAP, panelW, MenuLayout.ROW_H,
+                Component.translatable("gui.done"), b -> onClose()).style(GlassButton.Style.ACCENT));
+    }
+
+    private int action(int y, int x, int width, String key, Runnable onPress, GlassButton.Style style) {
+        addRenderableWidget(new GlassButton(x, y, width, MenuLayout.ROW_H, Component.translatable(key),
+                b -> onPress.run()).style(style));
+        return MenuLayout.nextRow(y);
     }
 
     private void apply() {
@@ -110,13 +128,15 @@ public class PresetEditScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-        g.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 74, 0xFFFFFFFF);
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        GlassSkin.panel(g, chromeX, chromeY, chromeW, chromeH);
+        GlassSkin.header(g, this.font, this.title, chromeX + PAD, headerY, chromeW - PAD * 2, 1f);
+        GlassSkin.divider(g, chromeX + PAD, dividerY, chromeW - PAD * 2, 1f);
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(parent);
+        ScreenSwoosh.surface(() -> parent, Config.SWOOSH_BACK);
     }
 }

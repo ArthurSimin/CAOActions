@@ -27,18 +27,33 @@ public final class AddonGroups {
 
     private record Groups(Set<ResourceLocation> hubs, Map<ResourceLocation, ResourceLocation> memberToHub) {}
 
+    private static volatile Groups cached;
+
     private AddonGroups() {}
 
     public static Set<ResourceLocation> hubs() {
-        return load().hubs();
+        return groups().hubs();
     }
 
     public static ResourceLocation hubFor(ResourceLocation member) {
-        return load().memberToHub().get(member);
+        return groups().memberToHub().get(member);
     }
 
     public static boolean isMember(ResourceLocation id) {
-        return load().memberToHub().containsKey(id);
+        return groups().memberToHub().containsKey(id);
+    }
+
+    public static void invalidate() {
+        cached = null;
+    }
+
+    private static Groups groups() {
+        Groups snapshot = cached;
+        if (snapshot == null) {
+            snapshot = load();
+            cached = snapshot;
+        }
+        return snapshot;
     }
 
     private static Groups load() {

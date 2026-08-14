@@ -88,6 +88,11 @@ public final class BackportPanelSkin implements IndexPanelSkin {
     }
 
     @Override
+    public boolean smoothScroll() {
+        return false;
+    }
+
+    @Override
     public void render(CreativeModeInventoryScreen screen, GuiGraphics gg, View view, int mouseX, int mouseY) {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();

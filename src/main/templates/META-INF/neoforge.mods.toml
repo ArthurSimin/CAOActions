@@ -33,8 +33,15 @@ config="${mod_id}-simulated.mixins.json"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
-    modId="create"
+    modId="fancytabsections"
     type="required"
+    versionRange="[6.0,)"
+    ordering="AFTER"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="create"
+    type="optional"
     versionRange="[6.0,)"
     ordering="AFTER"
     side="CLIENT"
@@ -43,5 +50,26 @@ config="${mod_id}-simulated.mixins.json"
     modId="simulated"
     type="optional"
     versionRange="[1.0,1.4)"
+    ordering="AFTER"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="kubejs"
+    type="optional"
+    versionRange="[0,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="item_obliterator"
+    type="optional"
+    versionRange="[0,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.${mod_id}]]
+    modId="condensed_creative"
+    type="optional"
+    versionRange="[0,)"
     ordering="AFTER"
     side="CLIENT"

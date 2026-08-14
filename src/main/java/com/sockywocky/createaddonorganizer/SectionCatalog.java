@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sockywocky.createaddonorganizer.client.CaoSection;
+import com.sockywocky.createaddonorganizer.mixin.CreativeModeTabDisplayNameAccessor;
 import com.sockywocky.createaddonorganizer.client.simulated.SimulatedHub;
 import com.sockywocky.createaddonorganizer.client.simulated.SimulatedSupport;
 
@@ -24,9 +26,9 @@ public final class SectionCatalog {
     private SectionCatalog() {}
 
     public record Entry(ResourceLocation id, Component name, boolean parent, boolean readOnly,
-            Integer nativeTextColor, Integer nativeSecondaryTextColor) {
+            Integer nativeTextColor, Integer nativeSecondaryTextColor, boolean tabOwned) {
         public Entry(ResourceLocation id, Component name, boolean parent) {
-            this(id, name, parent, false, null, null);
+            this(id, name, parent, false, null, null, false);
         }
     }
 
@@ -45,6 +47,10 @@ public final class SectionCatalog {
         return hubs;
     }
 
+    public static boolean isModDrawn(ResourceLocation id) {
+        return SimulatedSupport.isLoaded() && SimulatedHub.isAdopted(id);
+    }
+
     public static List<Entry> colorables() {
         Map<ResourceLocation, Component> names = new HashMap<>();
         Map<ResourceLocation, List<ResourceLocation>> addonsByParent = new LinkedHashMap<>();
@@ -57,7 +63,7 @@ public final class SectionCatalog {
             ResourceLocation id = e.getKey().location();
             String nameOverride = Config.sectionNameOverride(id);
             names.put(id, nameOverride != null ? Component.literal(nameOverride) : e.getValue().getDisplayName());
-            if (AddonDetection.isAbsorbTarget(id)) {
+            if (AddonDetection.isOffered(id)) {
                 addonsByParent.computeIfAbsent(Config.parentFor(id), k -> new ArrayList<>()).add(id);
             }
         }
@@ -66,21 +72,34 @@ public final class SectionCatalog {
 
         List<Entry> out = new ArrayList<>();
         for (ResourceLocation parent : orderedParents(managed)) {
-            List<ResourceLocation> sectionIds = sectionOrder(parent, addonsByParent.getOrDefault(parent, List.of()), names);
+            List<Row> rows = sectionOrder(parent, addonsByParent.getOrDefault(parent, List.of()), names);
             boolean firstRow = true;
-            for (ResourceLocation sid : sectionIds) {
-                out.add(new Entry(sid, names.getOrDefault(sid, Component.literal(sid.toString())), sid.equals(parent)));
+            for (Row row : rows) {
+                out.add(new Entry(row.id(), row.name(), row.id().equals(parent), false, null, null, row.tabOwned()));
                 if (firstRow && SimulatedSupport.isLoaded() && SimulatedSupport.isMainTab(parent)) {
-                    for (SimulatedHub.NativeSection nativeSection : SimulatedHub.nativeSections()) {
-                        out.add(new Entry(nativeSection.id(), nativeSection.title(), false, true,
-                                nativeSection.textColor(), nativeSection.secondaryTextColor()));
-                    }
+                    out.addAll(hostDrawnRows());
                 }
                 firstRow = false;
             }
         }
         return out;
     }
+
+    private static List<Entry> hostDrawnRows() {
+        List<Entry> out = new ArrayList<>();
+        for (ResourceLocation id : SimulatedHub.adoptedInDrawOrder()) {
+            Component title = SimulatedHub.adoptedTitle(id);
+            out.add(new Entry(id, title != null ? title : Component.literal(id.toString()), false, false,
+                    null, null, false));
+        }
+        for (SimulatedHub.NativeSection section : SimulatedHub.nativeSections()) {
+            out.add(new Entry(section.id(), section.title(), false, true,
+                    section.textColor(), section.secondaryTextColor(), false));
+        }
+        return out;
+    }
+
+    private record Row(ResourceLocation id, Component name, boolean tabOwned) {}
 
     private static List<ResourceLocation> orderedParents(Set<ResourceLocation> managed) {
         List<ResourceLocation> order = new ArrayList<>();
@@ -98,20 +117,52 @@ public final class SectionCatalog {
         return order;
     }
 
-    private static List<ResourceLocation> sectionOrder(ResourceLocation parent, List<ResourceLocation> predictedAddons,
+    private static List<Row> sectionOrder(ResourceLocation parent, List<ResourceLocation> predictedAddons,
             Map<ResourceLocation, Component> names) {
         List<Section<?>> live = FancyTabSections.REGISTERED_TABS.get(parent);
         if (live != null && !live.isEmpty()) {
-            List<ResourceLocation> ids = new ArrayList<>(live.size());
+            List<Row> rows = new ArrayList<>(live.size());
             for (Section<?> section : live) {
-                ids.add(section.id());
+                ResourceLocation id = section.id();
+                rows.add(new Row(id, id.equals(parent) ? hubName(parent) : nameOf(id, section, names),
+                        TabLayout.ownerOfSectionId(id) != null));
             }
-            return ids;
+            return rows;
         }
-        List<ResourceLocation> ids = new ArrayList<>(predictedAddons.size() + 1);
-        ids.add(parent);
-        ids.addAll(Config.applyOrder(predictedAddons,
-                id -> names.getOrDefault(id, Component.literal(id.toString())).getString()));
-        return ids;
+        List<Row> rows = new ArrayList<>(predictedAddons.size() + 1);
+        rows.add(new Row(parent, hubName(parent), false));
+        for (ResourceLocation id : Config.applyOrder(predictedAddons,
+                id -> names.getOrDefault(id, Component.literal(id.toString())).getString())) {
+            rows.add(new Row(id, nameOf(id, null, names), false));
+        }
+        return rows;
+    }
+
+    private static Component hubName(ResourceLocation parent) {
+        String override = Config.sectionNameOverride(parent);
+        if (override != null) {
+            return Component.literal(override);
+        }
+        CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.get(parent);
+        if (tab instanceof CreativeModeTabDisplayNameAccessor accessor) {
+            Component raw = accessor.createaddonorganizer$rawDisplayName();
+            if (raw != null) {
+                return raw;
+            }
+        }
+        return Component.literal(parent.toString());
+    }
+
+    private static Component nameOf(ResourceLocation id, Section<?> section, Map<ResourceLocation, Component> names) {
+        if (section != null && TabLayout.ownerOfSectionId(id) != null) {
+            return CaoSection.titleOf(section);
+        }
+        Component registered = names.get(id);
+        if (registered != null) {
+            return registered;
+        }
+        String override = Config.sectionNameOverride(id);
+        return override != null ? Component.literal(override) : Component.literal(id.toString());
     }
 }
+

@@ -35,3 +35,4 @@ repo/
 !**/src/**/repo/
 
 *.log
+logs/

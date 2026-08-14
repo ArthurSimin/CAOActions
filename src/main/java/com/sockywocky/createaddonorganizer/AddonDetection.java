@@ -22,6 +22,10 @@ public final class AddonDetection {
         return skipReason(tabId) == null;
     }
 
+    public static boolean isOffered(ResourceLocation tabId) {
+        return isAbsorbTarget(tabId) || KubeJsSupport.isPackTab(tabId);
+    }
+
     public static String skipReason(ResourceLocation tabId) {
         String ns = tabId.getNamespace();
         if (CREATE.equals(ns)) {
@@ -30,17 +34,27 @@ public final class AddonDetection {
         if (SimulatedSupport.isLoaded() && SimulatedSupport.isMainTab(tabId)) {
             return "Simulated's own main tab, never an absorb target";
         }
+        if (TabLayout.slotOf(tabId) >= 0 && !Config.isForceIncluded(tabId)) {
+            return "custom tab; only folded when you ask for it";
+        }
         if (Config.isForceExcluded(tabId)) {
-            return "force-excluded in config";
+            return PackDefaults.excludes(tabId) ? "left alone by this pack's script" : "force-excluded in config";
         }
         if (Config.parentFor(tabId) == null) {
             return "target hub is excluded";
         }
-        if (Config.isForceIncluded(tabId) || AddonGroups.isMember(tabId)) {
+        if (Config.isAskedForByName(tabId)) {
             return null;
+        }
+        if (createaddonorganizer.buildsItsOwnContents(tabId)) {
+            return "builds its own tab contents, so it keeps its own tab";
         }
         if (FancyTabSections.REGISTERED_TABS.containsKey(tabId)) {
             return "already organized with Fancy Tab Sections";
+        }
+        if (KubeJsSupport.isPackTab(tabId)) {
+            return "KubeJS pack tab -- fold it from this screen, or with CreateAddonOrganizer.fold('"
+                    + tabId + "', 'create:base') in a startup script";
         }
         ModContainer container = ModList.get().getModContainerById(ns).orElse(null);
         if (container == null) {
@@ -69,7 +83,13 @@ public final class AddonDetection {
                 && !MINECRAFT.equals(id.getNamespace())
                 && !knownHubs.contains(id)
                 && !Config.isBuiltinExcluded(id)
+                && !isUnusedCustomSlot(id)
                 && !SimulatedSupport.isMainTab(id);
+    }
+
+    public static boolean isUnusedCustomSlot(ResourceLocation id) {
+        int slot = TabLayout.slotOf(id);
+        return slot >= 0 && TabLayoutStore.bySlot(slot) == null;
     }
 
     public static boolean isHubPromotionCandidate(ResourceLocation id) {
@@ -81,7 +101,8 @@ public final class AddonDetection {
         return tab != null && tab.getType() == CreativeModeTab.Type.CATEGORY
                 && !MINECRAFT.equals(id.getNamespace())
                 && !knownHubs.contains(id)
-                && !Config.isBuiltinExcluded(id);
+                && !Config.isBuiltinExcluded(id)
+                && !isUnusedCustomSlot(id);
     }
 
     public static boolean isPlaced(ResourceLocation id) {
@@ -97,3 +118,4 @@ public final class AddonDetection {
         return false;
     }
 }
+

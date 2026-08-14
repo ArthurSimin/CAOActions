@@ -1,6 +1,7 @@
 package com.sockywocky.createaddonorganizer.client.simulated;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,6 +39,10 @@ public final class SimulatedHub {
     private static final Map<ResourceLocation, List<ResourceLocation>> OWNED_ITEM_IDS = new LinkedHashMap<>();
     private static final Map<ResourceLocation, Component> OWNED_TITLES = new LinkedHashMap<>();
 
+    private static final Set<ResourceLocation> ADOPTED = new LinkedHashSet<>();
+    private static final Map<ResourceLocation, Object> ADOPTED_ORIGINALS = new LinkedHashMap<>();
+    private static final Map<ResourceLocation, Object> INJECTED = new LinkedHashMap<>();
+
     private static final ResourceLocation SIMULATED_SELF = ResourceLocation.fromNamespaceAndPath("simulated", "simulated");
     private static final ResourceLocation AERONAUTICS_SELF = ResourceLocation.fromNamespaceAndPath("aeronautics", "aeronautics");
     private static final ResourceLocation OFFROAD_SELF = ResourceLocation.fromNamespaceAndPath("offroad", "offroad");
@@ -62,7 +67,8 @@ public final class SimulatedHub {
         return OWNED_SECTIONS.contains(id) ? SimulatedSupport.MAIN_TAB : null;
     }
 
-    public record NativeSection(ResourceLocation id, Component title, int textColor, int secondaryTextColor) {}
+    public record NativeSection(ResourceLocation id, Component title, int textColor, int secondaryTextColor,
+            int backgroundColor, ResourceLocation sprite, int priority, boolean animateOnHover) {}
 
     public static List<NativeSection> nativeSections() {
         List<NativeSection> out = new ArrayList<>();
@@ -74,11 +80,114 @@ public final class SimulatedHub {
             if (id == null || OWNED_SECTIONS.contains(id)) {
                 continue;
             }
-            Colorc light = section.title().color();
-            Colorc dark = section.title().secondaryColor().orElse(light.darken(0.2F, new Color()));
-            out.add(new NativeSection(id, section.title().text(), light.argb(), dark.argb()));
+            out.add(describe(id, section));
         }
         return out;
+    }
+
+    public static NativeSection houseStyleFor(String namespace) {
+        NativeSection best = null;
+        for (Map.Entry<ResourceLocation, Object> entry : ADOPTED_ORIGINALS.entrySet()) {
+            if (entry.getKey().getNamespace().equals(namespace)
+                    && entry.getValue() instanceof SimulatedSection section) {
+                best = better(best, describe(entry.getKey(), section));
+            }
+        }
+        for (Object value : accessor().getSortedValues()) {
+            if (!(value instanceof SimulatedSection section) || INJECTED.containsValue(value)) {
+                continue;
+            }
+            ResourceLocation id = accessor().getToId().get(value);
+            if (id != null && id.getNamespace().equals(namespace) && !ADOPTED_ORIGINALS.containsKey(id)) {
+                best = better(best, describe(id, section));
+            }
+        }
+        return best;
+    }
+
+    private static NativeSection better(NativeSection current, NativeSection candidate) {
+        if (current == null) {
+            return candidate;
+        }
+        return candidate.priority() < current.priority() ? candidate : current;
+    }
+
+    private static NativeSection describe(ResourceLocation id, SimulatedSection section) {
+        Colorc light = section.title().color();
+        Colorc dark = section.title().secondaryColor().orElse(light.darken(0.2F, new Color()));
+        return new NativeSection(id, section.title().text(), light.argb(), dark.argb(),
+                section.title().background().argb(), section.sprite(), section.priority(), section.animateOnHover());
+    }
+
+    public static List<ResourceLocation> nativeSprites() {
+        List<ResourceLocation> out = new ArrayList<>();
+        for (Object value : accessor().getSortedValues()) {
+            ResourceLocation id = accessor().getToId().get(value);
+            if (id != null && OWNED_SECTIONS.contains(id)) {
+                continue;
+            }
+            if (value instanceof SimulatedSection section && !out.contains(section.sprite())) {
+                out.add(section.sprite());
+            }
+        }
+        for (Object original : ADOPTED_ORIGINALS.values()) {
+            if (original instanceof SimulatedSection section && !out.contains(section.sprite())) {
+                out.add(section.sprite());
+            }
+        }
+        return out;
+    }
+
+    public static boolean isAdopted(ResourceLocation id) {
+        return ADOPTED.contains(id);
+    }
+
+    public static Set<ResourceLocation> adoptedIds() {
+        return Set.copyOf(ADOPTED);
+    }
+
+    public static List<ResourceLocation> adoptedInDrawOrder() {
+        List<ResourceLocation> out = new ArrayList<>();
+        for (Object value : accessor().getSortedValues()) {
+            ResourceLocation id = accessor().getToId().get(value);
+            if (id != null && ADOPTED.contains(id)) {
+                out.add(id);
+            }
+        }
+        return out;
+    }
+
+    public static Component adoptedTitle(ResourceLocation id) {
+        return OWNED_TITLES.get(id);
+    }
+
+    public static Component originalTitle(ResourceLocation id) {
+        return ADOPTED_ORIGINALS.get(id) instanceof SimulatedSection section ? section.title().text() : null;
+    }
+
+    public static void adopt(ResourceLocation id, Component title) {
+        Object original = accessor().getEntries().get(id);
+        if (original == null || OWNED_SECTIONS.contains(id)) {
+            return;
+        }
+        ADOPTED_ORIGINALS.put(id, original);
+        ADOPTED.add(id);
+        OWNED_TITLES.put(id, title);
+        OWNED_SECTIONS.add(id);
+        reinject(id);
+        rebuildAfterMutation();
+    }
+
+    public static void releaseAdopted(ResourceLocation id) {
+        Object original = ADOPTED_ORIGINALS.remove(id);
+        ADOPTED.remove(id);
+        OWNED_SECTIONS.remove(id);
+        OWNED_TITLES.remove(id);
+        INJECTED.remove(id);
+        if (original != null) {
+            accessor().getEntries().put(id, original);
+        }
+        rebuildAfterMutation();
     }
 
     public static void inject(ResourceLocation id, Component title) {
@@ -111,6 +220,10 @@ public final class SimulatedHub {
     }
 
     public static void remove(ResourceLocation id) {
+        if (ADOPTED.contains(id)) {
+            releaseAdopted(id);
+            return;
+        }
         List<ResourceLocation> itemIds = OWNED_ITEM_IDS.remove(id);
         if (itemIds != null) {
             SimulatedRegistrate.TAB_ITEMS.removeIf(supplier -> itemIds.contains(BuiltInRegistries.ITEM.getKey(supplier.get())));
@@ -118,23 +231,34 @@ public final class SimulatedHub {
         }
         OWNED_SECTIONS.remove(id);
         OWNED_TITLES.remove(id);
+        INJECTED.remove(id);
         accessor().getEntries().remove(id);
         rebuildAfterMutation();
     }
 
     public static void retractAll() {
         for (ResourceLocation id : new ArrayList<>(OWNED_SECTIONS)) {
-            remove(id);
+            if (!ADOPTED.contains(id)) {
+                remove(id);
+            }
         }
     }
 
     public static void reorder(List<ResourceLocation> orderedIds) {
-        int base = nativeMaxPriority() + 1;
-        int index = 0;
+        List<ResourceLocation> renumbered = new ArrayList<>();
         for (ResourceLocation id : orderedIds) {
-            if (!OWNED_SECTIONS.contains(id)) {
-                continue;
+            if (OWNED_SECTIONS.contains(id)) {
+                renumbered.add(id);
             }
+        }
+        for (ResourceLocation id : ADOPTED) {
+            if (!renumbered.contains(id) && ADOPTED_ORIGINALS.get(id) instanceof SimulatedSection original) {
+                reinjectWithPriority(id, original.priority());
+            }
+        }
+        int base = maxPriorityOutside(renumbered) + 1;
+        int index = 0;
+        for (ResourceLocation id : renumbered) {
             reinjectWithPriority(id, base + index);
             index++;
         }
@@ -150,10 +274,15 @@ public final class SimulatedHub {
     public static void verifyInjected() {
         boolean changed = false;
         for (ResourceLocation id : OWNED_SECTIONS) {
-            if (!accessor().getEntries().containsKey(id)) {
-                reinject(id);
-                changed = true;
+            Object current = accessor().getEntries().get(id);
+            if (current != null && current == INJECTED.get(id)) {
+                continue;
             }
+            if (current != null && ADOPTED.contains(id)) {
+                ADOPTED_ORIGINALS.put(id, current);
+            }
+            reinject(id);
+            changed = true;
         }
         if (changed) {
             rebuildAfterMutation();
@@ -177,7 +306,10 @@ public final class SimulatedHub {
 
     private static void reinject(ResourceLocation id) {
         Integer existing = currentPriority(id);
-        reinjectWithPriority(id, existing != null ? existing : nativeMaxPriority() + 1);
+        if (existing == null && ADOPTED_ORIGINALS.get(id) instanceof SimulatedSection original) {
+            existing = original.priority();
+        }
+        reinjectWithPriority(id, existing != null ? existing : maxPriorityOutside(OWNED_SECTIONS) + 1);
     }
 
     private static Integer currentPriority(ResourceLocation id) {
@@ -192,16 +324,31 @@ public final class SimulatedHub {
 
         JsonObject json = new JsonObject();
         json.addProperty("priority", priority);
+
+        if (ADOPTED_ORIGINALS.get(id) instanceof SimulatedSection original) {
+            json.addProperty("sprite", original.sprite().toString());
+            json.addProperty("only_animate_on_hover", original.animateOnHover());
+            titleJson.addProperty("background", hex(original.title().background()));
+            titleJson.addProperty("color", hex(original.title().color()));
+            original.title().secondaryColor()
+                    .ifPresent(secondary -> titleJson.addProperty("secondary_color", hex(secondary)));
+        }
+
         json.add("title", titleJson);
 
         SimulatedSection section = SimulatedSection.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
         accessor().getEntries().put(id, section);
+        INJECTED.put(id, section);
     }
 
-    private static int nativeMaxPriority() {
+    private static String hex(Colorc color) {
+        return String.format("#%08x", color.argb());
+    }
+
+    private static int maxPriorityOutside(Collection<ResourceLocation> renumbered) {
         int max = 0;
         for (Map.Entry<ResourceLocation, Object> entry : accessor().getEntries().entrySet()) {
-            if (OWNED_SECTIONS.contains(entry.getKey())) {
+            if (renumbered.contains(entry.getKey())) {
                 continue;
             }
             if (entry.getValue() instanceof SimulatedSection s) {
@@ -250,8 +397,22 @@ public final class SimulatedHub {
         return SimulatedCreativeTab.SECTION_Y_VALUES.containsKey(id) ? SimulatedCreativeTab.SECTION_Y_VALUES.getInt(id) : null;
     }
 
+    public static Map<ResourceLocation, List<ItemStack>> itemsBySection() {
+        Map<ResourceLocation, List<ItemStack>> out = new LinkedHashMap<>();
+        for (var supplier : SimulatedRegistrate.TAB_ITEMS) {
+            Item item = supplier.get();
+            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
+            ResourceLocation sectionId = SimulatedRegistrate.ITEM_TO_SECTION.get(itemId);
+            if (sectionId == null) {
+                continue;
+            }
+            out.computeIfAbsent(sectionId, key -> new ArrayList<>()).add(new ItemStack(item));
+        }
+        return out;
+    }
+
     public static ItemStack iconFor(ResourceLocation sectionId, boolean owned) {
-        if (owned) {
+        if (owned && !ADOPTED.contains(sectionId)) {
             return ownedIcon(sectionId);
         }
         if (SIMULATED_SELF.equals(sectionId)) {
@@ -290,3 +451,4 @@ public final class SimulatedHub {
         return (SimResourceManagerAccessor) SimResourceManagers.SIMULATED_SECTION;
     }
 }
+

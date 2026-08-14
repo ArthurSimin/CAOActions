@@ -7,9 +7,10 @@ import java.util.stream.Stream;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.sockywocky.createaddonorganizer.AbsorbedTabs;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
@@ -23,14 +24,15 @@ import net.minecraft.world.item.CreativeModeTabs;
 @Mixin(CreativeModeTabs.class)
 public class CreativeModeTabsMixin {
 
-    @Redirect(
+    @WrapOperation(
             method = "buildAllTabContents",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/world/item/CreativeModeTabs;streamAllTabs()Ljava/util/stream/Stream;"))
-    private static Stream<CreativeModeTab> createaddonorganizer$buildCreateLast() {
+    private static Stream<CreativeModeTab> createaddonorganizer$buildCreateLast(
+            Operation<Stream<CreativeModeTab>> original) {
         List<CreativeModeTab> ordered = new ArrayList<>();
         List<CreativeModeTab> deferred = new ArrayList<>();
-        for (CreativeModeTab tab : CreativeModeTabs.allTabs()) {
+        for (CreativeModeTab tab : original.call().toList()) {
             ResourceLocation id = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
             if (id != null && createaddonorganizer.MANAGED_PARENTS.contains(id)) {
                 deferred.add(tab);

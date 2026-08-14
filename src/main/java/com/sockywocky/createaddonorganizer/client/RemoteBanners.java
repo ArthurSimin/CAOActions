@@ -7,10 +7,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -37,6 +36,7 @@ public final class RemoteBanners {
             "https://raw.githubusercontent.com/SockyWocky7/createaddonorganizer/master/banners/index.json";
 
     private static final AtomicBoolean SYNC_STARTED = new AtomicBoolean(false);
+    private static final AtomicInteger CONTENT_VERSION = new AtomicInteger();
 
     private static volatile List<RemoteContributor> contributors = List.of();
     private static volatile Set<String> availableFiles = Set.of();
@@ -48,8 +48,6 @@ public final class RemoteBanners {
     public record RemoteBannerFile(String file, int v) {}
 
     public record RemoteContributor(String name, String color, List<RemoteBannerFile> banners) {}
-
-    private record FetchResult(boolean notModified, byte[] body, String etag, String baseUrl) {}
 
     public static void loadCacheFromDisk() {
         try {
@@ -76,12 +74,7 @@ public final class RemoteBanners {
     }
 
     public static void syncAsync() {
-        if (!SYNC_STARTED.compareAndSet(false, true)) {
-            return;
-        }
-        Thread thread = new Thread(RemoteBanners::sync, "createaddonorganizer-banner-sync");
-        thread.setDaemon(true);
-        thread.start();
+        RemoteFetch.startDaemon("createaddonorganizer-banner-sync", RemoteBanners::sync, SYNC_STARTED);
     }
 
     public static List<RemoteContributor> contributors() {
@@ -119,6 +112,16 @@ public final class RemoteBanners {
         } else {
             loadCacheFromDisk();
         }
+    }
+
+    public static int clearCache() {
+        int removed = RemoteCache.wipe(REMOTE_DIR);
+        contributors = List.of();
+        availableFiles = Set.of();
+        everCached = false;
+        CONTENT_VERSION.incrementAndGet();
+        SYNC_STARTED.set(false);
+        return removed;
     }
 
     public static void refreshLocal() {
@@ -169,13 +172,11 @@ public final class RemoteBanners {
             if (!Config.fetchOnlineBanners()) {
                 return;
             }
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-            String etag = readEtag();
+            HttpClient client = RemoteFetch.newClient();
+            String etag = RemoteFetch.readEtag(ETAG_FILE, "banner manifest");
 
-            FetchResult result = fetchManifest(client, Config.bannerManifestUrl(), etag);
-            if (result == null) {
-                result = fetchManifest(client, RAW_FALLBACK_URL, etag);
-            }
+            RemoteFetch.FetchResult result = RemoteFetch.fetchWithFallback(
+                    client, Config.bannerManifestUrl(), RAW_FALLBACK_URL, etag, "banner manifest");
             if (result == null) {
                 createaddonorganizer.LOGGER.warn("[CAO] remote banner manifest fetch failed (primary and fallback)");
                 return;
@@ -195,9 +196,9 @@ public final class RemoteBanners {
             }
             downloadMissingOrChanged(client, result.baseUrl(), newContributors, previousVersions);
 
-            writeAtomic(MANIFEST_CACHE, result.body());
+            RemoteFetch.writeAtomic(MANIFEST_CACHE, result.body());
             if (result.etag() != null) {
-                writeAtomic(ETAG_FILE, result.etag().getBytes(StandardCharsets.UTF_8));
+                RemoteFetch.writeAtomic(ETAG_FILE, result.etag().getBytes(StandardCharsets.UTF_8));
             }
 
             contributors = newContributors;
@@ -205,30 +206,6 @@ public final class RemoteBanners {
             everCached = true;
         } catch (Exception e) {
             createaddonorganizer.LOGGER.warn("[CAO] remote banner sync failed", e);
-        }
-    }
-
-    private static FetchResult fetchManifest(HttpClient client, String url, String etag) {
-        try {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(8))
-                    .GET();
-            if (etag != null && !etag.isBlank()) {
-                builder.header("If-None-Match", etag);
-            }
-            HttpResponse<byte[]> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
-            String baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
-            if (response.statusCode() == 304) {
-                return new FetchResult(true, null, etag, baseUrl);
-            }
-            if (response.statusCode() != 200) {
-                return null;
-            }
-            String newEtag = response.headers().firstValue("ETag").orElse(null);
-            return new FetchResult(false, response.body(), newEtag, baseUrl);
-        } catch (IOException | InterruptedException e) {
-            createaddonorganizer.LOGGER.warn("[CAO] failed to fetch remote banner manifest from {}", url, e);
-            return null;
         }
     }
 
@@ -242,12 +219,12 @@ public final class RemoteBanners {
                 if (!missing && !changed) {
                     continue;
                 }
-                downloadPng(client, baseUrl + file.file(), target);
+                downloadPng(client, baseUrl + file.file(), target, !missing);
             }
         }
     }
 
-    private static void downloadPng(HttpClient client, String url, Path target) {
+    private static void downloadPng(HttpClient client, String url, Path target, boolean replacing) {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(8))
@@ -259,13 +236,30 @@ public final class RemoteBanners {
                 return;
             }
             byte[] bytes = response.body();
-            try (ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-                    NativeImage image = NativeImage.read(in)) {
+            if (!isReadablePng(bytes)) {
+                createaddonorganizer.LOGGER.warn("[CAO] remote banner is not a readable PNG, discarding: {}", url);
+                return;
             }
-            writeAtomic(target, bytes);
+            RemoteFetch.writeAtomic(target, bytes);
+            if (replacing) {
+                CONTENT_VERSION.incrementAndGet();
+            }
         } catch (IOException | InterruptedException e) {
             createaddonorganizer.LOGGER.warn("[CAO] remote banner download failed: {}", url, e);
         }
+    }
+
+    private static boolean isReadablePng(byte[] bytes) {
+        try (ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+                NativeImage ignored = NativeImage.read(in)) {
+            return true;
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
+    }
+
+    public static int contentVersion() {
+        return CONTENT_VERSION.get();
     }
 
     private static List<RemoteContributor> parseManifest(byte[] bytes) {
@@ -334,26 +328,5 @@ public final class RemoteBanners {
         }
         return map;
     }
-
-    private static String readEtag() {
-        try {
-            if (Files.exists(ETAG_FILE)) {
-                return Files.readString(ETAG_FILE, StandardCharsets.UTF_8).trim();
-            }
-        } catch (IOException e) {
-            createaddonorganizer.LOGGER.warn("[CAO] failed to read cached banner manifest etag", e);
-        }
-        return null;
-    }
-
-    private static void writeAtomic(Path target, byte[] bytes) throws IOException {
-        Files.createDirectories(target.getParent());
-        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-        Files.write(tmp, bytes);
-        try {
-            Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-        }
-    }
 }
+

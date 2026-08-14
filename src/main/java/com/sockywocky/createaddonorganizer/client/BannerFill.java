@@ -1,7 +1,6 @@
 package com.sockywocky.createaddonorganizer.client;
 
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import com.mojang.blaze3d.platform.NativeImage;
@@ -94,12 +93,13 @@ public final class BannerFill {
         }
 
         ResourceLocation id = ResourceLocation.fromNamespaceAndPath(createaddonorganizer.MODID,
-                "banner_fill_cache/" + Integer.toHexString(key.hashCode()).toLowerCase(Locale.ROOT));
-        DynamicTexture texture = new DynamicTexture(image);
-        Minecraft.getInstance().getTextureManager().register(id, texture);
-        CACHE.put(key, new CachedTexture(id, texture));
+                "banner_fill_cache/" + Long.toHexString(nextTextureId++));
+        Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(image));
+        CACHE.put(key, new CachedTexture(id));
         return id;
     }
+
+    private static long nextTextureId;
 
     private static int[][] bayerMatrixFor(ColorSpec.Style style) {
         return switch (style) {
@@ -130,11 +130,9 @@ public final class BannerFill {
 
     private static final class CachedTexture {
         final ResourceLocation id;
-        final DynamicTexture texture;
 
-        CachedTexture(ResourceLocation id, DynamicTexture texture) {
+        CachedTexture(ResourceLocation id) {
             this.id = id;
-            this.texture = texture;
         }
 
         void release() {

@@ -161,7 +161,7 @@ public final class DevMode {
         return sb.toString();
     }
 
-    private static boolean isOurScreen(Screen screen) {
+    static boolean isOurScreen(Screen screen) {
         try {
             if (screen instanceof ConfigurationScreen cs && CONFIG_SCREEN_MOD_FIELD != null) {
                 ModContainer mod = (ModContainer) CONFIG_SCREEN_MOD_FIELD.get(cs);
@@ -171,6 +171,20 @@ public final class DevMode {
                 ConfigurationSectionScreen.Context context =
                         (ConfigurationSectionScreen.Context) SECTION_SCREEN_CONTEXT_FIELD.get(css);
                 return context != null && createaddonorganizer.MODID.equals(context.modId());
+            }
+        } catch (ReflectiveOperationException e) {
+            return false;
+        }
+        return false;
+    }
+
+    public static boolean isTopConfigSection(Screen screen) {
+        try {
+            if (screen instanceof ConfigurationSectionScreen css && SECTION_SCREEN_CONTEXT_FIELD != null) {
+                ConfigurationSectionScreen.Context context =
+                        (ConfigurationSectionScreen.Context) SECTION_SCREEN_CONTEXT_FIELD.get(css);
+                return context != null && createaddonorganizer.MODID.equals(context.modId())
+                        && context.keylist().isEmpty();
             }
         } catch (ReflectiveOperationException e) {
             return false;
@@ -189,3 +203,4 @@ public final class DevMode {
         }
     }
 }
+

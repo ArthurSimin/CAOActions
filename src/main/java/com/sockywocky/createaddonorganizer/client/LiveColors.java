@@ -1,11 +1,14 @@
 package com.sockywocky.createaddonorganizer.client;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.UnaryOperator;
 
+import com.sockywocky.createaddonorganizer.client.simulated.NativeSections;
 import com.sockywocky.createaddonorganizer.client.simulated.SimulatedHub;
 import com.sockywocky.createaddonorganizer.client.simulated.SimulatedSupport;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
@@ -56,22 +59,31 @@ public final class LiveColors {
         if (sections == null || sections.isEmpty()) {
             return;
         }
-        Map<ResourceLocation, Section<?>> byId = new HashMap<>();
-        for (Section<?> section : sections) {
-            byId.put(section.id(), section);
+        Set<ResourceLocation> movable = new LinkedHashSet<>(orderedAddonIds);
+        List<Integer> slots = new ArrayList<>();
+        Map<ResourceLocation, Section<?>> byId = new LinkedHashMap<>();
+        for (int i = 0; i < sections.size(); i++) {
+            Section<?> section = sections.get(i);
+            if (movable.contains(section.id())) {
+                slots.add(i);
+                byId.put(section.id(), section);
+            }
         }
-        List<Section<?>> rebuilt = new ArrayList<>(sections.size());
-        Section<?> own = byId.remove(parent);
-        if (own != null) {
-            rebuilt.add(own);
+        if (slots.isEmpty()) {
+            return;
         }
+        List<Section<?>> ordered = new ArrayList<>(slots.size());
         for (ResourceLocation id : orderedAddonIds) {
             Section<?> section = byId.remove(id);
             if (section != null) {
-                rebuilt.add(section);
+                ordered.add(section);
             }
         }
-        rebuilt.addAll(byId.values());
+        ordered.addAll(byId.values());
+        List<Section<?>> rebuilt = new ArrayList<>(sections);
+        for (int i = 0; i < slots.size(); i++) {
+            rebuilt.set(slots.get(i), ordered.get(i));
+        }
         FancyTabSections.REGISTERED_TABS.put(parent, rebuilt);
     }
 
@@ -83,6 +95,9 @@ public final class LiveColors {
             }
         }
         for (Map.Entry<ResourceLocation, List<Section<?>>> entry : FancyTabSections.REGISTERED_TABS.entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
             for (Section<?> section : entry.getValue()) {
                 if (section.id().equals(id)) {
                     return entry.getKey();
@@ -147,6 +162,26 @@ public final class LiveColors {
         }
     }
 
+    public static boolean isAdoptedNative(ResourceLocation id) {
+        return SimulatedSupport.isLoaded() && SimulatedHub.isAdopted(id);
+    }
+
+    public static Component nativeTitle(ResourceLocation id) {
+        return isAdoptedNative(id) ? SimulatedHub.originalTitle(id) : null;
+    }
+
+    public static void releaseNative(ResourceLocation id) {
+        if (SimulatedSupport.isLoaded()) {
+            NativeSections.release(id);
+        }
+    }
+
+    public static void readoptNative(ResourceLocation id) {
+        if (SimulatedSupport.isLoaded()) {
+            NativeSections.readopt(id);
+        }
+    }
+
     private static boolean isSimulated(ResourceLocation id) {
         return SimulatedSupport.isLoaded() && SimulatedHub.ownerIfAny(id) != null;
     }
@@ -173,3 +208,4 @@ public final class LiveColors {
         }
     }
 }
+

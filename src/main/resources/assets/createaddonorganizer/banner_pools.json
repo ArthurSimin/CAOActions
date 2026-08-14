@@ -141,5 +141,47 @@
   ],
   "dndesires:base_tab": [
     "remote:dreamsndesires1.png"
+  ],
+  "bellsandwhistles:bells_and_whistles_tab": [
+    "remote:bellsnwhistles.png"
+  ],
+  "createsprings:create_springs_main_tab": [
+    "shipped:createsprings:textures/gui/csprings_banner.png"
+  ],
+  "farmersdelight:farmersdelight": [
+    "remote:farmersdelight1.png"
+  ],
+  "create_mobile_packages:create_mobile_packages_tab": [
+    "remote:mobilepackages.png"
+  ],
+  "aeronautics_dyeable_components:levitite": [
+    "native:aeronautics_dyeable_components:levitie_section_banner"
+  ],
+  "aeronautics_dyeable_components:wheels": [
+    "native:aeronautics_dyeable_components:wheels_section_banner"
+  ],
+  "create_lnl:create_lnl": [
+    "native:create_lnl:banner"
+  ],
+  "offroad:offroad": [
+    "native:offroad:banner"
+  ],
+  "aeronautics:aeronautics": [
+    "native:aeronautics:banner"
+  ],
+  "simulated:simulated": [
+    "native:simulated:banner"
+  ],
+  "simulated:main_tab": [
+    "native:simulated:banner"
+  ],
+  "createpropulsion:propulsion_main": [
+    "native:createpropulsion:propulsion_banner"
+  ],
+  "createpropulsion:propulsion_tools": [
+    "native:createpropulsion:creative_casing_banner"
+  ],
+  "createpropulsion:main_tab": [
+    "native:createpropulsion:propulsion_banner"
   ]
 }

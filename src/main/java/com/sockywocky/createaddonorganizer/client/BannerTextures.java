@@ -20,9 +20,12 @@ import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
+import com.sockywocky.createaddonorganizer.client.simulated.NativeSections;
+import com.sockywocky.createaddonorganizer.client.simulated.SimulatedSupport;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.neoforged.fml.loading.FMLPaths;
@@ -43,8 +46,62 @@ public final class BannerTextures {
     private static final Map<String, ResourceLocation> REMOTE_REGISTERED = new HashMap<>();
     private static final Map<ResourceLocation, Integer> FILE_HEIGHTS = new HashMap<>();
     private static final Set<ResourceLocation> BUNDLED_REGISTERED = new HashSet<>();
+    private static final Map<String, ResourceLocation> NATIVE_REGISTERED = new HashMap<>();
+    private static final Set<String> NATIVE_FAILED = new HashSet<>();
+    private static final Map<String, ResourceLocation> SHIPPED_REGISTERED = new HashMap<>();
+    private static final Set<String> SHIPPED_FAILED = new HashSet<>();
+
+    private static final int NATIVE_FRAME_HEIGHT = 18;
+    private static final int CONTENT_HEIGHT = 16;
+
+    private static final int[] FALLBACK_FRAME_HEIGHTS = {NATIVE_FRAME_HEIGHT, 19, HEIGHT};
+    private static final String NATIVE_PREFIX = "native:";
+    private static final String SHIPPED_PREFIX = "shipped:";
 
     private BannerTextures() {}
+
+    public static String shippedRef(ResourceLocation art) {
+        return SHIPPED_PREFIX + art;
+    }
+
+    public static boolean isShippedRef(String ref) {
+        return ref != null && ref.startsWith(SHIPPED_PREFIX);
+    }
+
+    public static ResourceLocation shippedArtOf(String ref) {
+        return isShippedRef(ref) ? ResourceLocation.tryParse(ref.substring(SHIPPED_PREFIX.length())) : null;
+    }
+
+    public static String nativeRef(ResourceLocation sprite) {
+        return NATIVE_PREFIX + sprite;
+    }
+
+    public static boolean isNativeRef(String ref) {
+        return ref != null && ref.startsWith(NATIVE_PREFIX);
+    }
+
+    public static ResourceLocation nativeSpriteOf(String ref) {
+        return isNativeRef(ref) ? ResourceLocation.tryParse(ref.substring(NATIVE_PREFIX.length())) : null;
+    }
+
+    public static ResourceLocation nativeTexturePath(ResourceLocation sprite) {
+        return ResourceLocation.fromNamespaceAndPath(sprite.getNamespace(),
+                "textures/gui/sprites/" + sprite.getPath() + ".png");
+    }
+
+    public static int nativeFrameTicks(ResourceLocation sprite) {
+        Optional<Resource> resource = Minecraft.getInstance().getResourceManager()
+                .getResource(nativeTexturePath(sprite));
+        if (resource.isEmpty()) {
+            return 1;
+        }
+        try {
+            return resource.get().metadata().getSection(AnimationMetadataSection.SERIALIZER)
+                    .map(a -> Math.max(1, a.getDefaultFrameTime())).orElse(1);
+        } catch (IOException e) {
+            return 1;
+        }
+    }
 
     public static ResourceLocation resolve(String ref) {
         if (ref == null) {
@@ -62,7 +119,24 @@ public final class BannerTextures {
             ResourceLocation cached = FILE_REGISTERED.get(fileName);
             return cached != null ? cached : loadFileAndCache(BANNERS_DIR.resolve(fileName), fileName);
         }
+        if (ref.startsWith(NATIVE_PREFIX)) {
+            ResourceLocation cached = NATIVE_REGISTERED.get(ref);
+            if (cached != null) {
+                return cached;
+            }
+            ResourceLocation sprite = nativeSpriteOf(ref);
+            return sprite != null && !NATIVE_FAILED.contains(ref) ? loadNativeAndCache(ref, sprite) : null;
+        }
+        if (ref.startsWith(SHIPPED_PREFIX)) {
+            ResourceLocation cached = SHIPPED_REGISTERED.get(ref);
+            if (cached != null) {
+                return cached;
+            }
+            ResourceLocation art = shippedArtOf(ref);
+            return art != null && !SHIPPED_FAILED.contains(ref) ? loadShippedAndCache(ref, art) : null;
+        }
         if (ref.startsWith("remote:")) {
+            dropRemoteTexturesIfRedownloaded();
             String fileName = ref.substring(7);
             ResourceLocation cached = REMOTE_REGISTERED.get(fileName);
             if (cached != null) {
@@ -103,8 +177,23 @@ public final class BannerTextures {
                 .map(f -> "remote:" + f)
                 .toList();
 
-        List<String> out = new ArrayList<>(bundled.size() + uploads.size() + remotes.size());
+        List<String> natives = SimulatedSupport.isLoaded() ? NativeSections.galleryRefs() : List.of();
+        Set<ResourceLocation> nativeArt = new HashSet<>();
+        for (String ref : natives) {
+            ResourceLocation sprite = nativeSpriteOf(ref);
+            if (sprite != null) {
+                nativeArt.add(nativeTexturePath(sprite));
+            }
+        }
+        List<String> shipped = ShippedBanners.galleryRefs().stream()
+                .filter(ref -> !nativeArt.contains(shippedArtOf(ref)))
+                .toList();
+
+        List<String> out = new ArrayList<>(bundled.size() + uploads.size() + remotes.size()
+                + natives.size() + shipped.size());
         out.addAll(bundled);
+        out.addAll(natives);
+        out.addAll(shipped);
         out.addAll(uploads);
         out.addAll(remotes);
         return out;
@@ -136,6 +225,17 @@ public final class BannerTextures {
         }
     }
 
+    private static int seenRemoteContentVersion;
+
+    private static void dropRemoteTexturesIfRedownloaded() {
+        int version = RemoteBanners.contentVersion();
+        if (version == seenRemoteContentVersion) {
+            return;
+        }
+        seenRemoteContentVersion = version;
+        invalidateRemoteCache();
+    }
+
     public static void invalidateRemoteCache() {
         for (ResourceLocation rl : REMOTE_REGISTERED.values()) {
             Minecraft.getInstance().getTextureManager().release(rl);
@@ -154,6 +254,7 @@ public final class BannerTextures {
         if (registered != null) {
             Minecraft.getInstance().getTextureManager().release(registered);
             FILE_HEIGHTS.remove(registered);
+            BannerAnimation.invalidate(registered);
         }
         try {
             Files.deleteIfExists(BANNERS_DIR.resolve(fileName));
@@ -196,6 +297,7 @@ public final class BannerTextures {
             FILE_HEIGHTS.put(rl, resized.getHeight());
             Minecraft.getInstance().getTextureManager().register(rl, new DynamicTexture(resized));
             FILE_REGISTERED.put(fileName, rl);
+            BannerAnimation.invalidate(rl);
             return rl;
         } catch (IOException e) {
             createaddonorganizer.LOGGER.warn("[CAO] failed to load banner image {}", path, e);
@@ -211,11 +313,110 @@ public final class BannerTextures {
             FILE_HEIGHTS.put(rl, resized.getHeight());
             Minecraft.getInstance().getTextureManager().register(rl, new DynamicTexture(resized));
             REMOTE_REGISTERED.put(fileName, rl);
+            BannerAnimation.invalidate(rl);
             return rl;
         } catch (IOException e) {
             createaddonorganizer.LOGGER.warn("[CAO] failed to load remote banner image {}", path, e);
             return null;
         }
+    }
+
+    private static ResourceLocation loadNativeAndCache(String ref, ResourceLocation sprite) {
+        ResourceLocation source = nativeTexturePath(sprite);
+        Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(source);
+        if (resource.isEmpty()) {
+            NATIVE_FAILED.add(ref);
+            createaddonorganizer.LOGGER.warn("[CAO] no image behind the sprite {}, so its banner cannot be reused", sprite);
+            return null;
+        }
+        ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(createaddonorganizer.MODID,
+                "native_banner/" + sanitizeStem(sprite.getNamespace() + "_" + sprite.getPath()));
+        ResourceLocation registered = convertAndRegister(resource.get(), rl);
+        if (registered == null) {
+            NATIVE_FAILED.add(ref);
+            createaddonorganizer.LOGGER.warn("[CAO] failed to convert the banner sprite {}", sprite);
+            return null;
+        }
+        NATIVE_REGISTERED.put(ref, registered);
+        return registered;
+    }
+
+    private static ResourceLocation loadShippedAndCache(String ref, ResourceLocation art) {
+        Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(art);
+        if (resource.isEmpty()) {
+            SHIPPED_FAILED.add(ref);
+            createaddonorganizer.LOGGER.warn("[CAO] the banner image {} is gone, so it cannot be reused", art);
+            return null;
+        }
+        ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(createaddonorganizer.MODID,
+                "shipped_banner/" + sanitizeStem(art.getNamespace() + "_" + art.getPath()));
+        ResourceLocation registered = convertAndRegister(resource.get(), rl);
+        if (registered == null) {
+            SHIPPED_FAILED.add(ref);
+            createaddonorganizer.LOGGER.warn("[CAO] failed to convert the banner image {}", art);
+            return null;
+        }
+        SHIPPED_REGISTERED.put(ref, registered);
+        return registered;
+    }
+
+    private static ResourceLocation convertAndRegister(Resource resource, ResourceLocation rl) {
+        try (InputStream in = resource.open()) {
+            NativeImage converted = convertNative(NativeImage.read(in), resource);
+            FILE_HEIGHTS.put(rl, converted.getHeight());
+            Minecraft.getInstance().getTextureManager().register(rl, new DynamicTexture(converted));
+            BannerAnimation.invalidate(rl);
+            return rl;
+        } catch (IOException | RuntimeException e) {
+            createaddonorganizer.LOGGER.warn("[CAO] could not read a banner image for {}", rl, e);
+            return null;
+        }
+    }
+
+    private static int frameHeightOf(Resource resource, NativeImage src) {
+        try {
+            Optional<AnimationMetadataSection> anim = resource.metadata().getSection(AnimationMetadataSection.SERIALIZER);
+            if (anim.isPresent()) {
+                int declared = anim.get().calculateFrameSize(src.getWidth(), src.getHeight()).height();
+                if (declared > 0 && src.getHeight() % declared == 0) {
+                    return declared;
+                }
+            }
+        } catch (IOException e) {
+            createaddonorganizer.LOGGER.warn("[CAO] unreadable animation metadata on a banner sprite", e);
+        }
+        for (int candidate : FALLBACK_FRAME_HEIGHTS) {
+            if (src.getHeight() % candidate == 0) {
+                return candidate;
+            }
+        }
+        return src.getHeight();
+    }
+
+    private static NativeImage convertNative(NativeImage src, Resource resource) {
+        int frameHeight = Math.max(1, frameHeightOf(resource, src));
+        int frames = Math.max(1, src.getHeight() / frameHeight);
+        boolean croppable = src.getWidth() >= WIDTH && frameHeight >= CONTENT_HEIGHT;
+        int insetX = croppable ? (src.getWidth() - WIDTH) / 2 : 0;
+        int insetY = croppable ? Math.min(1, frameHeight - CONTENT_HEIGHT) : 0;
+
+        NativeImage dst = new NativeImage(WIDTH, HEIGHT * frames, false);
+        for (int frame = 0; frame < frames; frame++) {
+            int srcTop = frame * frameHeight;
+            int dstTop = frame * HEIGHT;
+            for (int y = 0; y < CONTENT_HEIGHT; y++) {
+                int sy = croppable ? srcTop + insetY + y : srcTop + y * frameHeight / CONTENT_HEIGHT;
+                for (int x = 0; x < WIDTH; x++) {
+                    int sx = croppable ? insetX + x : x * src.getWidth() / WIDTH;
+                    dst.setPixelRGBA(x, dstTop + y, src.getPixelRGBA(sx, Math.min(sy, src.getHeight() - 1)));
+                }
+            }
+            for (int x = 0; x < WIDTH; x++) {
+                dst.setPixelRGBA(x, dstTop + HEIGHT - 1, dst.getPixelRGBA(x, dstTop + CONTENT_HEIGHT - 1));
+            }
+        }
+        src.close();
+        return dst;
     }
 
     private static NativeImage resizeForImport(NativeImage src) {
@@ -250,3 +451,4 @@ public final class BannerTextures {
         return name;
     }
 }
+

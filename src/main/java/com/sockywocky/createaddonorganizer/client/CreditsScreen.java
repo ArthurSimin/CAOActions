@@ -3,12 +3,13 @@ package com.sockywocky.createaddonorganizer.client;
 import java.util.List;
 import java.util.Optional;
 
+import com.sockywocky.createaddonorganizer.Config;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -24,12 +25,17 @@ public class CreditsScreen extends Screen {
     private static final int SUB_LINE_X = 6;
     private static final int SUB_LINE_FADE = 10;
 
-    private static final String DISCORD_URL = "https://discord.gg/gfVqfFQ3KB";
-    private static final int CONTRIBUTE_Y = 46;
+    private static final int BANNER_W = BannerTextures.WIDTH * 6 / 5;
+    private static final int BANNER_H = (BannerTextures.HEIGHT * 6 + 2) / 5;
+    private static final int ROW_HEIGHT = BANNER_H + 8;
+
+    private static final String DISCORD_URL = "https://discord.com/invite/WgYePqcRTk";
+    private static final int CONTRIBUTE_Y = MenuLayout.DESC_Y + 12;
 
     private final Screen parent;
     private boolean empty;
     private Component hoverBannerTooltip;
+    private int panelW = MenuLayout.PANEL_W;
 
     public CreditsScreen(Screen parent) {
         super(Component.translatable("createaddonorganizer.colors.credits.title"));
@@ -38,9 +44,13 @@ public class CreditsScreen extends Screen {
 
     @Override
     protected void init() {
-        int listTop = 60;
-        int listBottom = this.height - 40;
-        CreditsList list = new CreditsList(this.minecraft, this.width, listBottom - listTop, listTop, 24);
+        panelW = MenuLayout.panelWidth(this.width);
+        int panelX = MenuLayout.panelX(this.width);
+
+        int listTop = MenuLayout.ROW_1 + MenuLayout.GAP;
+        int listBottom = MenuLayout.listBottom(this.height, 0);
+        CreditsList list = new CreditsList(this.minecraft, panelW, listBottom - listTop, listTop, ROW_HEIGHT);
+        list.setX(panelX);
         List<CreditsCatalog.Entry> entries = CreditsCatalog.rows();
         empty = entries.isEmpty();
         for (CreditsCatalog.Entry entry : entries) {
@@ -49,10 +59,10 @@ public class CreditsScreen extends Screen {
         addRenderableWidget(list);
 
         if (DevMode.isUnlocked()) {
-            addRenderableWidget(Checkbox.builder(Component.translatable("createaddonorganizer.colors.credits.localTesting"), this.font)
-                    .pos(6, 6)
-                    .selected(RemoteBanners.isLocalTesting())
-                    .onValueChange((cb, checked) -> {
+            addRenderableWidget(new GlassToggle(6, 6,
+                    Component.translatable("createaddonorganizer.colors.credits.localTesting"),
+                    RemoteBanners.isLocalTesting(),
+                    checked -> {
                         RemoteBanners.setLocalTesting(checked);
                         if (checked) {
                             RemoteBannerPools.refreshLocal();
@@ -61,8 +71,7 @@ public class CreditsScreen extends Screen {
                         }
                         BannerTextures.invalidateRemoteCache();
                         rebuildWidgets();
-                    })
-                    .build());
+                    }));
             Button refreshButton = addRenderableWidget(Button.builder(
                             Component.translatable("createaddonorganizer.colors.credits.refresh"),
                             b -> {
@@ -75,15 +84,18 @@ public class CreditsScreen extends Screen {
             refreshButton.active = RemoteBanners.isLocalTesting();
         }
 
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-                .bounds(this.width / 2 - 89, this.height - 30, 178, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("?"), b -> {})
-                .bounds(this.width / 2 + 93, this.height - 30, 18, 20)
-                .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.credits.onlineHint")))
-                .build());
+        int doneY = MenuLayout.doneY(this.height);
+        int iconW = MenuLayout.ROW_H;
         addRenderableWidget(Button.builder(Component.literal("1"), b -> this.minecraft.setScreen(new TextBannerCreditsScreen(this.parent)))
-                .bounds(this.width / 2 - 111, this.height - 30, 18, 20)
+                .bounds(panelX, doneY, iconW, MenuLayout.ROW_H)
                 .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.credits.viewTextBanner")))
+                .build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
+                .bounds(panelX + iconW + MenuLayout.GAP, doneY,
+                        panelW - (iconW + MenuLayout.GAP) * 2, MenuLayout.ROW_H).build());
+        addRenderableWidget(Button.builder(Component.literal("?"), b -> {})
+                .bounds(panelX + panelW - iconW, doneY, iconW, MenuLayout.ROW_H)
+                .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.credits.onlineHint")))
                 .build());
     }
 
@@ -95,11 +107,12 @@ public class CreditsScreen extends Screen {
         float scale = 1.6f;
         g.pose().pushPose();
         g.pose().scale(scale, scale, scale);
-        g.drawCenteredString(this.font, this.title, Math.round(this.width / 2 / scale), Math.round(16 / scale), 0xFFFFFFFF);
+        g.drawCenteredString(this.font, this.title, Math.round(this.width / 2 / scale),
+                Math.round(MenuLayout.TITLE_Y / scale), 0xFFFFFFFF);
         g.pose().popPose();
 
         g.drawCenteredString(this.font, Component.translatable("createaddonorganizer.colors.credits.description"),
-                this.width / 2, 34, 0xAAAAAAAA);
+                this.width / 2, MenuLayout.DESC_Y, 0xAAAAAAAA);
 
         Component prefix = Component.translatable("createaddonorganizer.colors.credits.contribute");
         Component link = Component.translatable("createaddonorganizer.colors.credits.discord");
@@ -141,11 +154,12 @@ public class CreditsScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(parent);
+        ScreenSwoosh.surface(() -> parent, Config.SWOOSH_BACK);
     }
 
     private class CreditsList extends ContainerObjectSelectionList<CreditsList.Row> {
         private final int rowHeight;
+        private final ListGlide glide = new ListGlide();
 
         CreditsList(Minecraft mc, int width, int height, int top, int itemHeight) {
             super(mc, width, height, top, itemHeight);
@@ -157,8 +171,35 @@ public class CreditsScreen extends Screen {
         }
 
         @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+            glide.endScroll(this);
+            return handled;
+        }
+
+        @Override
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+            glide.beginScroll(this);
+            boolean handled = super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+            glide.endScroll(this);
+            return handled;
+        }
+
+        @Override
+        public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            glide.beforeRender(this);
+            super.renderWidget(g, mouseX, mouseY, partialTick);
+        }
+
+        @Override
         public int getRowWidth() {
-            return 320;
+            return CreditsScreen.this.panelW - 16;
+        }
+
+        @Override
+        protected int getScrollbarPosition() {
+            return this.getX() + this.getWidth() - 6;
         }
 
         private boolean isLastInGroup(int index) {
@@ -213,14 +254,15 @@ public class CreditsScreen extends Screen {
                     g.fill(lineX, top, lineX + 2, lineBottom + gapToNext, lineColor);
                 }
 
-                int bx = left + (rowWidth - BannerTextures.WIDTH) / 2;
-                int by = top + (rowHeight - BannerTextures.HEIGHT) / 2;
-                g.fill(bx - 1, by - 1, bx + BannerTextures.WIDTH + 1, by + BannerTextures.HEIGHT + 1, 0xFF000000);
+                int bx = left + (rowWidth - BANNER_W) / 2;
+                int by = top + (rowHeight - BANNER_H) / 2;
+                g.fill(bx - 1, by - 1, bx + BANNER_W + 1, by + BANNER_H + 1, 0xFF000000);
                 Optional<BannerAnimation.AnimInfo> anim = BannerAnimation.get(data.texture());
                 int frameCount = anim.map(BannerAnimation.AnimInfo::frameCount).orElse(1);
-                boolean bannerHovered = BannerAnimation.isHovering(bx, by, BannerTextures.WIDTH, BannerTextures.HEIGHT, mouseX, mouseY);
+                boolean bannerHovered = BannerAnimation.isHovering(bx, by, BANNER_W, BANNER_H, mouseX, mouseY);
                 int frame = anim.map(info -> BannerAnimation.currentFrame(data.texture(), info, bannerHovered)).orElse(0);
-                g.blit(data.texture(), bx, by, 0.0F, frame * BannerTextures.HEIGHT, BannerTextures.WIDTH, BannerTextures.HEIGHT,
+                g.blit(data.texture(), bx, by, BANNER_W, BANNER_H, 0.0F, frame * BannerTextures.HEIGHT,
+                        BannerTextures.WIDTH, BannerTextures.HEIGHT,
                         BannerTextures.WIDTH, frameCount * BannerTextures.HEIGHT);
                 if (bannerHovered && data.filename() != null) {
                     CreditsScreen.this.hoverBannerTooltip = Component.literal(data.filename());

@@ -7,10 +7,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,8 +47,6 @@ public final class RemoteBoxTextures {
 
     public record RemoteContributor(String name, String color, List<RemoteBoxFile> textures) {}
 
-    private record FetchResult(boolean notModified, byte[] body, String etag, String baseUrl) {}
-
     public static void loadCacheFromDisk() {
         try {
             if (!Files.exists(MANIFEST_CACHE)) {
@@ -75,13 +71,17 @@ public final class RemoteBoxTextures {
         }
     }
 
+    public static int clearCache() {
+        int removed = RemoteCache.wipe(REMOTE_DIR);
+        contributors = List.of();
+        availableFiles = Set.of();
+        everCached = false;
+        SYNC_STARTED.set(false);
+        return removed;
+    }
+
     public static void syncAsync() {
-        if (!SYNC_STARTED.compareAndSet(false, true)) {
-            return;
-        }
-        Thread thread = new Thread(RemoteBoxTextures::sync, "createaddonorganizer-box-texture-sync");
-        thread.setDaemon(true);
-        thread.start();
+        RemoteFetch.startDaemon("createaddonorganizer-box-texture-sync", RemoteBoxTextures::sync, SYNC_STARTED);
     }
 
     public static List<RemoteContributor> contributors() {
@@ -169,13 +169,11 @@ public final class RemoteBoxTextures {
             if (!Config.fetchOnlineBoxTextures()) {
                 return;
             }
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-            String etag = readEtag();
+            HttpClient client = RemoteFetch.newClient();
+            String etag = RemoteFetch.readEtag(ETAG_FILE, "box-texture manifest");
 
-            FetchResult result = fetchManifest(client, Config.boxManifestUrl(), etag);
-            if (result == null) {
-                result = fetchManifest(client, RAW_FALLBACK_URL, etag);
-            }
+            RemoteFetch.FetchResult result = RemoteFetch.fetchWithFallback(
+                    client, Config.boxManifestUrl(), RAW_FALLBACK_URL, etag, "box-texture manifest");
             if (result == null) {
                 createaddonorganizer.LOGGER.warn("[CAO] remote box-texture manifest fetch failed (primary and fallback)");
                 return;
@@ -195,9 +193,9 @@ public final class RemoteBoxTextures {
             }
             downloadMissingOrChanged(client, result.baseUrl(), newContributors, previousVersions);
 
-            writeAtomic(MANIFEST_CACHE, result.body());
+            RemoteFetch.writeAtomic(MANIFEST_CACHE, result.body());
             if (result.etag() != null) {
-                writeAtomic(ETAG_FILE, result.etag().getBytes(StandardCharsets.UTF_8));
+                RemoteFetch.writeAtomic(ETAG_FILE, result.etag().getBytes(StandardCharsets.UTF_8));
             }
 
             contributors = newContributors;
@@ -205,30 +203,6 @@ public final class RemoteBoxTextures {
             everCached = true;
         } catch (Exception e) {
             createaddonorganizer.LOGGER.warn("[CAO] remote box-texture sync failed", e);
-        }
-    }
-
-    private static FetchResult fetchManifest(HttpClient client, String url, String etag) {
-        try {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(8))
-                    .GET();
-            if (etag != null && !etag.isBlank()) {
-                builder.header("If-None-Match", etag);
-            }
-            HttpResponse<byte[]> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
-            String baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
-            if (response.statusCode() == 304) {
-                return new FetchResult(true, null, etag, baseUrl);
-            }
-            if (response.statusCode() != 200) {
-                return null;
-            }
-            String newEtag = response.headers().firstValue("ETag").orElse(null);
-            return new FetchResult(false, response.body(), newEtag, baseUrl);
-        } catch (IOException | InterruptedException e) {
-            createaddonorganizer.LOGGER.warn("[CAO] failed to fetch remote box-texture manifest from {}", url, e);
-            return null;
         }
     }
 
@@ -262,7 +236,7 @@ public final class RemoteBoxTextures {
             try (ByteArrayInputStream in = new ByteArrayInputStream(bytes);
                     NativeImage image = NativeImage.read(in)) {
             }
-            writeAtomic(target, bytes);
+            RemoteFetch.writeAtomic(target, bytes);
         } catch (IOException | InterruptedException e) {
             createaddonorganizer.LOGGER.warn("[CAO] remote box-texture download failed: {}", url, e);
         }
@@ -333,27 +307,5 @@ public final class RemoteBoxTextures {
             }
         }
         return map;
-    }
-
-    private static String readEtag() {
-        try {
-            if (Files.exists(ETAG_FILE)) {
-                return Files.readString(ETAG_FILE, StandardCharsets.UTF_8).trim();
-            }
-        } catch (IOException e) {
-            createaddonorganizer.LOGGER.warn("[CAO] failed to read cached box-texture manifest etag", e);
-        }
-        return null;
-    }
-
-    private static void writeAtomic(Path target, byte[] bytes) throws IOException {
-        Files.createDirectories(target.getParent());
-        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-        Files.write(tmp, bytes);
-        try {
-            Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-        }
     }
 }

@@ -1,0 +1,1 @@
+startup CreateAddonOrganizer com.sockywocky.createaddonorganizer.kubejs.CaoBindings

@@ -2,16 +2,10 @@ package com.sockywocky.createaddonorganizer.client;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,8 +34,6 @@ public final class RemoteBannerPools {
     private static volatile Map<String, List<String>> pools = Map.of();
     private static volatile boolean everCached = false;
 
-    private record FetchResult(boolean notModified, byte[] body, String etag) {}
-
     private RemoteBannerPools() {}
 
     public static void loadCacheFromDisk() {
@@ -65,13 +57,16 @@ public final class RemoteBannerPools {
         }
     }
 
+    public static int clearCache() {
+        int removed = RemoteCache.wipe(REMOTE_DIR);
+        pools = Map.of();
+        everCached = false;
+        SYNC_STARTED.set(false);
+        return removed;
+    }
+
     public static void syncAsync() {
-        if (!SYNC_STARTED.compareAndSet(false, true)) {
-            return;
-        }
-        Thread thread = new Thread(RemoteBannerPools::sync, "createaddonorganizer-banner-pools-sync");
-        thread.setDaemon(true);
-        thread.start();
+        RemoteFetch.startDaemon("createaddonorganizer-banner-pools-sync", RemoteBannerPools::sync, SYNC_STARTED);
     }
 
     public static boolean hasEverCached() {
@@ -127,13 +122,11 @@ public final class RemoteBannerPools {
                 refreshLocal();
                 return;
             }
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-            String etag = readEtag();
+            HttpClient client = RemoteFetch.newClient();
+            String etag = RemoteFetch.readEtag(ETAG_FILE, "banner-pool manifest");
 
-            FetchResult result = fetchManifest(client, Config.bannerPoolsManifestUrl(), etag);
-            if (result == null) {
-                result = fetchManifest(client, RAW_FALLBACK_URL, etag);
-            }
+            RemoteFetch.FetchResult result = RemoteFetch.fetchWithFallback(
+                    client, Config.bannerPoolsManifestUrl(), RAW_FALLBACK_URL, etag, "banner-pool manifest");
             if (result == null) {
                 createaddonorganizer.LOGGER.warn("[CAO] remote banner-pool manifest fetch failed (primary and fallback)");
                 return;
@@ -147,38 +140,15 @@ public final class RemoteBannerPools {
                 return;
             }
 
-            writeAtomic(MANIFEST_CACHE, result.body());
+            RemoteFetch.writeAtomic(MANIFEST_CACHE, result.body());
             if (result.etag() != null) {
-                writeAtomic(ETAG_FILE, result.etag().getBytes(StandardCharsets.UTF_8));
+                RemoteFetch.writeAtomic(ETAG_FILE, result.etag().getBytes(StandardCharsets.UTF_8));
             }
 
             pools = parsed;
             everCached = true;
         } catch (Exception e) {
             createaddonorganizer.LOGGER.warn("[CAO] remote banner-pool sync failed", e);
-        }
-    }
-
-    private static FetchResult fetchManifest(HttpClient client, String url, String etag) {
-        try {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(8))
-                    .GET();
-            if (etag != null && !etag.isBlank()) {
-                builder.header("If-None-Match", etag);
-            }
-            HttpResponse<byte[]> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
-            if (response.statusCode() == 304) {
-                return new FetchResult(true, null, etag);
-            }
-            if (response.statusCode() != 200) {
-                return null;
-            }
-            String newEtag = response.headers().firstValue("ETag").orElse(null);
-            return new FetchResult(false, response.body(), newEtag);
-        } catch (IOException | InterruptedException e) {
-            createaddonorganizer.LOGGER.warn("[CAO] failed to fetch remote banner-pool manifest from {}", url, e);
-            return null;
         }
     }
 
@@ -203,27 +173,5 @@ public final class RemoteBannerPools {
             sanitized.put(entry.getKey(), List.copyOf(entry.getValue()));
         }
         return Map.copyOf(sanitized);
-    }
-
-    private static String readEtag() {
-        try {
-            if (Files.exists(ETAG_FILE)) {
-                return Files.readString(ETAG_FILE, StandardCharsets.UTF_8).trim();
-            }
-        } catch (IOException e) {
-            createaddonorganizer.LOGGER.warn("[CAO] failed to read cached banner-pool manifest etag", e);
-        }
-        return null;
-    }
-
-    private static void writeAtomic(Path target, byte[] bytes) throws IOException {
-        Files.createDirectories(target.getParent());
-        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
-        Files.write(tmp, bytes);
-        try {
-            Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-        }
     }
 }
