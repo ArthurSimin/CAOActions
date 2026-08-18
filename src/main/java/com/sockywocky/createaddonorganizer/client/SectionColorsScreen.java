@@ -1238,7 +1238,9 @@ public class SectionColorsScreen extends Screen {
         renamingId = entry.id();
         renameBox = new EditBox(this.font, 0, 0, 100, 20, Component.empty());
         renameBox.setMaxLength(64);
-        renameBox.setValue(entry.name().getString());
+        String stored = TabLayout.ownerOfSectionId(entry.id()) == null
+                ? Config.sectionNameOverride(entry.id()) : null;
+        renameBox.setValue(stored != null ? stored : entry.name().getString());
         renameBox.setHighlightPos(0);
         renameBox.setFocused(true);
         renameBox.setTooltip(Tooltip.create(Component.translatable("createaddonorganizer.rename.hint")));
@@ -1375,7 +1377,7 @@ public class SectionColorsScreen extends Screen {
         orderDirty = false;
         pendingOrder = null;
         lastUndo = null;
-        Notice.show(Component.translatable("createaddonorganizer.colors.saved"), Notice.GREEN);
+        Notice.showQuiet(Component.translatable("createaddonorganizer.colors.saved"), Notice.GREEN);
     }
 
     private void reorderStoredLayout(ResourceLocation parent, List<ResourceLocation> order) {
@@ -1492,6 +1494,8 @@ public class SectionColorsScreen extends Screen {
     }
 
     private class ColorList extends ContainerObjectSelectionList<ColorList.Row> {
+        private static final double DRAG_SCROLL_PX = 5d;
+
         private final int rowHeight;
         private Row dragRow;
         private int dragFromIndex;
@@ -1535,6 +1539,10 @@ public class SectionColorsScreen extends Screen {
         @Override
         public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             glide.beforeRender(this);
+            if (dragRow != null && dragActive) {
+                dragAutoScroll(mouseY);
+                retarget(mouseY);
+            }
             SectionColorsScreen.this.slide.begin(g);
             super.renderWidget(g, mouseX, mouseY, partialTick);
             SectionColorsScreen.this.slide.end(g);
@@ -1657,6 +1665,32 @@ public class SectionColorsScreen extends Screen {
 
         private int ghostTop(double mouseY) {
             return Mth.clamp((int) mouseY - dragGrabOffsetY, getY(), getY() + getHeight() - rowHeight);
+        }
+
+        private void dragAutoScroll(int mouseY) {
+            int max = getMaxScroll();
+            if (max <= 0) {
+                return;
+            }
+            int band = Math.max(rowHeight, 12);
+            int top = getY();
+            int bottom = getY() + getHeight();
+            double push;
+            if (mouseY < top + band) {
+                push = (mouseY - (top + band)) / (double) band;
+            } else if (mouseY > bottom - band) {
+                push = (mouseY - (bottom - band)) / (double) band;
+            } else {
+                return;
+            }
+            double from = glide.target();
+            double to = Mth.clamp(from + Mth.clamp(push, -1d, 1d) * DRAG_SCROLL_PX, 0d, max);
+            if (to == from) {
+                return;
+            }
+            glide.beginScroll(this);
+            setScrollAmount(to);
+            glide.endScroll(this);
         }
 
         @Override
@@ -2024,6 +2058,7 @@ public class SectionColorsScreen extends Screen {
                 }
                 if (!ColorList.this.dragActive && Math.abs(mouseY - ColorList.this.dragStartMouseY) > 4) {
                     ColorList.this.dragActive = true;
+                    Sfx.grab();
                 }
                 ColorList.this.retarget(mouseY);
                 return true;
@@ -2037,6 +2072,7 @@ public class SectionColorsScreen extends Screen {
                 List<Row> all = ColorList.this.children();
                 Map<Row, Float> shownTops = new LinkedHashMap<>();
                 if (ColorList.this.dragActive) {
+                    Sfx.release();
                     for (int i = 0; i < all.size(); i++) {
                         Row r = all.get(i);
                         shownTops.put(r, r == dragRow

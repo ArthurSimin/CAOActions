@@ -14,6 +14,7 @@ import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 
+import com.sockywocky.createaddonorganizer.GuardLog;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
 public final class ClientRegistries {
@@ -81,7 +82,7 @@ public final class ClientRegistries {
             CreativeModeTabs.tryRebuildTabContents(params.enabledFeatures(), params.hasPermissions(),
                     params.holders());
         } catch (Throwable t) {
-            createaddonorganizer.LOGGER.warn("[CAO] could not build creative tab contents without a world", t);
+            GuardLog.report("could not build creative tab contents without a world", t);
         }
     }
 
@@ -115,7 +116,7 @@ public final class ClientRegistries {
             try {
                 tab.buildContents(primeParams);
             } catch (Throwable t) {
-                createaddonorganizer.LOGGER.warn("[CAO] could not build contents for a creative tab", t);
+                GuardLog.report("could not build contents for a creative tab", t);
             }
             if (System.nanoTime() >= deadline) {
                 return false;

@@ -51,6 +51,8 @@ public final class SimulatedHub {
     private static final ResourceLocation AERONAUTICS_ICON_ITEM = ResourceLocation.fromNamespaceAndPath("aeronautics", "white_envelope");
     private static final ResourceLocation OFFROAD_ICON_ITEM = ResourceLocation.fromNamespaceAndPath("offroad", "tire");
 
+    private static final Map<String, ItemStack> BORROWED_ICONS = new LinkedHashMap<>();
+
     private static int stateVersion = 0;
 
     private SimulatedHub() {}
@@ -244,6 +246,13 @@ public final class SimulatedHub {
         }
     }
 
+    public static void releaseAll() {
+        retractAll();
+        for (ResourceLocation id : new ArrayList<>(ADOPTED)) {
+            releaseAdopted(id);
+        }
+    }
+
     public static void reorder(List<ResourceLocation> orderedIds) {
         List<ResourceLocation> renumbered = new ArrayList<>();
         for (ResourceLocation id : orderedIds) {
@@ -393,6 +402,16 @@ public final class SimulatedHub {
         return out;
     }
 
+    public static List<ResourceLocation> orderableInDrawOrder() {
+        List<ResourceLocation> out = new ArrayList<>();
+        for (IndexEntry entry : allSectionsInOrder()) {
+            if (entry.owned()) {
+                out.add(entry.id());
+            }
+        }
+        return out;
+    }
+
     public static Integer rowOf(ResourceLocation id) {
         return SimulatedCreativeTab.SECTION_Y_VALUES.containsKey(id) ? SimulatedCreativeTab.SECTION_Y_VALUES.getInt(id) : null;
     }
@@ -431,7 +450,41 @@ public final class SimulatedHub {
                 return new ItemStack(item);
             }
         }
-        return ItemStack.EMPTY;
+        return borrowedIcon(sectionId);
+    }
+
+    private static ItemStack borrowedIcon(ResourceLocation sectionId) {
+        ItemStack own = SafeIcon.of(BuiltInRegistries.CREATIVE_MODE_TAB.get(sectionId));
+        if (!own.isEmpty()) {
+            return own;
+        }
+        String namespace = sectionId.getNamespace();
+        ItemStack cached = BORROWED_ICONS.get(namespace);
+        if (cached != null) {
+            return cached;
+        }
+        ItemStack found = ItemStack.EMPTY;
+        for (var entry : BuiltInRegistries.CREATIVE_MODE_TAB.entrySet()) {
+            if (!namespace.equals(entry.getKey().location().getNamespace())) {
+                continue;
+            }
+            ItemStack icon = SafeIcon.of(entry.getValue());
+            if (!icon.isEmpty()) {
+                found = icon;
+                break;
+            }
+        }
+        if (found.isEmpty()) {
+            for (Item item : BuiltInRegistries.ITEM) {
+                ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
+                if (itemId != null && namespace.equals(itemId.getNamespace())) {
+                    found = new ItemStack(item);
+                    break;
+                }
+            }
+        }
+        BORROWED_ICONS.put(namespace, found);
+        return found;
     }
 
     private static ItemStack ownedIcon(ResourceLocation sectionId) {

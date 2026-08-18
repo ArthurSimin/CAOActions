@@ -20,6 +20,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.CreativeModeTabRegistry;
 
 public final class SectionCatalog {
@@ -62,9 +63,13 @@ public final class SectionCatalog {
         for (Map.Entry<ResourceKey<CreativeModeTab>, CreativeModeTab> e : BuiltInRegistries.CREATIVE_MODE_TAB.entrySet()) {
             ResourceLocation id = e.getKey().location();
             String nameOverride = Config.sectionNameOverride(id);
-            names.put(id, nameOverride != null ? Component.literal(nameOverride) : e.getValue().getDisplayName());
+            names.put(id, nameOverride != null && !nameOverride.isBlank()
+                    ? Component.literal(nameOverride) : e.getValue().getDisplayName());
             if (AddonDetection.isOffered(id)) {
-                addonsByParent.computeIfAbsent(Config.parentFor(id), k -> new ArrayList<>()).add(id);
+                ResourceLocation parent = Config.parentFor(id);
+                if (parent != null) {
+                    addonsByParent.computeIfAbsent(parent, k -> new ArrayList<>()).add(id);
+                }
             }
         }
 
@@ -89,11 +94,10 @@ public final class SectionCatalog {
         List<Entry> out = new ArrayList<>();
         for (ResourceLocation id : SimulatedHub.adoptedInDrawOrder()) {
             Component title = SimulatedHub.adoptedTitle(id);
-            out.add(new Entry(id, title != null ? title : Component.literal(id.toString()), false, false,
-                    null, null, false));
+            out.add(new Entry(id, labelFor(id, title), false, false, null, null, false));
         }
         for (SimulatedHub.NativeSection section : SimulatedHub.nativeSections()) {
-            out.add(new Entry(section.id(), section.title(), false, true,
+            out.add(new Entry(section.id(), labelFor(section.id(), section.title()), false, true,
                     section.textColor(), section.secondaryTextColor(), false));
         }
         return out;
@@ -140,29 +144,42 @@ public final class SectionCatalog {
 
     private static Component hubName(ResourceLocation parent) {
         String override = Config.sectionNameOverride(parent);
-        if (override != null) {
-            return Component.literal(override);
+        return labelFor(parent, override == null ? null : Component.literal(override));
+    }
+
+    public static Component labelFor(ResourceLocation id, Component candidate) {
+        if (candidate != null && !candidate.getString().isBlank()) {
+            return candidate;
         }
-        CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.get(parent);
+        if (id == null) {
+            return Component.empty();
+        }
+        CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.get(id);
         if (tab instanceof CreativeModeTabDisplayNameAccessor accessor) {
             Component raw = accessor.createaddonorganizer$rawDisplayName();
-            if (raw != null) {
+            if (raw != null && !raw.getString().isBlank()) {
                 return raw;
             }
         }
-        return Component.literal(parent.toString());
+        String modName = ModList.get().getModContainerById(id.getNamespace())
+                .map(container -> container.getModInfo().getDisplayName())
+                .orElse(null);
+        if (modName != null && !modName.isBlank()) {
+            return Component.literal(modName);
+        }
+        return Component.literal(id.toString());
     }
 
     private static Component nameOf(ResourceLocation id, Section<?> section, Map<ResourceLocation, Component> names) {
         if (section != null && TabLayout.ownerOfSectionId(id) != null) {
-            return CaoSection.titleOf(section);
+            return labelFor(id, CaoSection.titleOf(section));
         }
         Component registered = names.get(id);
-        if (registered != null) {
+        if (registered != null && !registered.getString().isBlank()) {
             return registered;
         }
         String override = Config.sectionNameOverride(id);
-        return override != null ? Component.literal(override) : Component.literal(id.toString());
+        return labelFor(id, override == null ? null : Component.literal(override));
     }
 }
 

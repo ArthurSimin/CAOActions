@@ -75,11 +75,7 @@
     "mynethersdelight:main",
     "copycats:functional"
   ],
-  "forceExclude": [
-    "create:base",
-    "simulated:main_tab",
-    "create:palettes"
-  ],
+  "forceExclude": [],
   "routes": [],
   "extraMainSections": [],
   "highlightColors": [

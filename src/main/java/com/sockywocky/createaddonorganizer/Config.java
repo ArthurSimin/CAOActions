@@ -306,9 +306,11 @@ public class Config {
 
     public static final ModConfigSpec.IntValue MENU_FRAMERATE = BUILDER
             .comment("Frame rate cap while a menu is open outside a world. Vanilla hard-codes this to 60,",
-                    "which makes menu scrolling and animations feel choppy. Your video settings' Max",
-                    "Framerate still applies as the upper bound. Set to 60 for vanilla behaviour.")
-            .defineInRange("menuFramerate", 120, 60, 1000);
+                    "which makes menu scrolling and animations feel choppy. Raise it for smoother menus --",
+                    "but if your display uses V-Sync, a cap that does not divide your refresh rate can make",
+                    "menus beat or flicker, so this is left at vanilla's 60 unless you opt in. Your video",
+                    "settings' Max Framerate still applies as the upper bound.")
+            .defineInRange("menuFramerate", 60, 60, 1000);
 
     static {
         BUILDER.pop();
@@ -2333,7 +2335,7 @@ public class Config {
     }
 
     private static String lookupValue(List<? extends String> list, ResourceLocation id) {
-        return index(list, '=').get(id.toString());
+        return id == null ? null : index(list, '=').get(id.toString());
     }
 
     private static Integer lookupColor(List<? extends String> list, ResourceLocation id) {

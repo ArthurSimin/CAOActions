@@ -218,7 +218,7 @@ public final class SectionIndexPanel {
         for (int i = 0; i < ids.size(); i++) {
             Integer row = rowOf(ids.get(i));
             if (row == null) {
-                return -1;
+                continue;
             }
             if (row <= topRow) {
                 sel = i;

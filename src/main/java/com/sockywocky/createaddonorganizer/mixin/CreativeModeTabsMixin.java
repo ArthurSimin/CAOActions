@@ -14,8 +14,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.sockywocky.createaddonorganizer.AbsorbedTabs;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
@@ -49,11 +47,6 @@ public class CreativeModeTabsMixin {
         if (AbsorbedTabs.IDS.isEmpty()) {
             return;
         }
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null || !(minecraft.screen instanceof CreativeModeInventoryScreen)) {
-            return;
-        }
-
         List<CreativeModeTab> original = cir.getReturnValue();
         List<CreativeModeTab> filtered = new ArrayList<>(original.size());
         boolean removedAny = false;

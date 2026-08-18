@@ -1,5 +1,7 @@
 package com.sockywocky.createaddonorganizer.mixin;
 
+import java.util.Set;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
@@ -13,4 +15,10 @@ public interface CreativeModeTabAccessor {
 
     @Accessor("displayItemsGenerator")
     CreativeModeTab.DisplayItemsGenerator getDisplayItemsGenerator();
+
+    @Accessor("displayItemsSearchTab")
+    Set<ItemStack> getDisplayItemsSearchTab();
+
+    @Accessor("displayItemsSearchTab")
+    void setDisplayItemsSearchTab(Set<ItemStack> items);
 }

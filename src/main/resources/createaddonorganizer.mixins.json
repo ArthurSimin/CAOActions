@@ -3,10 +3,13 @@
   "minVersion": "0.8.5",
   "package": "com.sockywocky.createaddonorganizer.mixin",
   "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "CreativeModeTabAccessor",
+    "CreativeModeTabBuildContentsGuardMixin"
+  ],
   "client": [
     "CreativeModeTabsMixin",
     "CreativeModeTabsAccessor",
-    "CreativeModeTabAccessor",
     "CreativeModeTabDisplayMixin",
     "CreativeModeTabDisplayNameAccessor",
     "CreativeModeInventoryScreenMixin",
@@ -14,7 +17,6 @@
     "ItemPickerMenuAccessor",
     "AbstractContainerScreenMixin",
     "AbstractContainerScreenAccessor",
-    "CreativeModeTabBuildContentsGuardMixin",
     "CreativeTabEventDispatchResilienceMixin",
     "IndexPanelMixin",
     "ModListSearchMixin",

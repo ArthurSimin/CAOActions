@@ -48,7 +48,7 @@
   "createaddonorganizer.configuration.stickySectionBanners": "Sticky Section Banners",
   "createaddonorganizer.configuration.stickySectionBanners.tooltip": "Pins a section's banner at the top while you scroll its items.",
   "createaddonorganizer.configuration.menuFramerate": "Menu Frame Rate",
-  "createaddonorganizer.configuration.menuFramerate.tooltip": "Frame cap for menus outside a world. Vanilla pins these to 60, making scrolling choppy; Max Framerate still wins.",
+  "createaddonorganizer.configuration.menuFramerate.tooltip": "Frame cap for menus outside a world. Vanilla pins these to 60, making scrolling choppy. Raising it can make menus beat against V-Sync, so it stays at 60 unless you opt in; Max Framerate still wins.",
   "createaddonorganizer.configuration.defaultTextSecondaryColor": "Default Secondary Text Color",
   "createaddonorganizer.configuration.textSecondaryColors": "Per-Section Secondary Text Colors",
   "createaddonorganizer.configuration.textSecondaryColors.tooltip": "",

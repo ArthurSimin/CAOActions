@@ -1,6 +1,7 @@
 package com.sockywocky.createaddonorganizer;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.sockywocky.createaddonorganizer.client.CreateCompat;
 import com.sockywocky.createaddonorganizer.client.ClearCacheCooldown;
 import com.sockywocky.createaddonorganizer.client.ClientRegistries;
 import com.sockywocky.createaddonorganizer.client.DevMode;
@@ -48,6 +49,7 @@ import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -110,6 +112,7 @@ public class createaddonorganizerClient {
                     ModBannerCatalog.invalidate();
                 }));
 
+        NeoForge.EVENT_BUS.addListener(createaddonorganizerClient::onFrameStart);
         NeoForge.EVENT_BUS.addListener(createaddonorganizerClient::onClientTick);
         NeoForge.EVENT_BUS.addListener(createaddonorganizerClient::onScreenRender);
         NeoForge.EVENT_BUS.addListener(createaddonorganizerClient::onHudRender);
@@ -198,6 +201,10 @@ public class createaddonorganizerClient {
                 ? Component.translatable("createaddonorganizer.colors.credits.clearCache.tooltip")
                 : Component.translatable("createaddonorganizer.colors.credits.clearCache.cooldown",
                         ClearCacheCooldown.remainingLabel())));
+    }
+
+    private static void onFrameStart(RenderFrameEvent.Pre event) {
+        CreateCompat.discardStaleFrame();
     }
 
     private static void onScreenRender(ScreenEvent.Render.Post event) {

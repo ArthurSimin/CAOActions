@@ -1,5 +1,6 @@
 package com.sockywocky.createaddonorganizer;
 
+import java.util.Locale;
 import java.util.Set;
 
 import net.mcexpanded.fancytabsections.FancyTabSections;
@@ -60,11 +61,36 @@ public final class AddonDetection {
         if (container == null) {
             return "no loaded mod owns namespace '" + ns + "'";
         }
-        boolean dependsOnSimulated = SimulatedSupport.isLoaded() && dependsOn(container, SimulatedSupport.MOD_ID);
-        if (!dependsOn(container, CREATE) && !dependsOnSimulated) {
+        IModInfo.DependencyType onCreate = dependencyType(container, CREATE);
+        IModInfo.DependencyType onSimulated = SimulatedSupport.isLoaded()
+                ? dependencyType(container, SimulatedSupport.MOD_ID) : null;
+        if (onCreate == null && onSimulated == null) {
             return "mod '" + ns + "' declares no Create or Simulated dependency";
         }
+        if (onCreate != IModInfo.DependencyType.REQUIRED && onSimulated != IModInfo.DependencyType.REQUIRED
+                && !looksLikeAddon(container, ns)) {
+            String linkedTo = onCreate != null ? CREATE : SimulatedSupport.MOD_ID;
+            return "mod '" + ns + "' lists " + linkedTo + " only as an optional dependency and nothing else marks "
+                    + "it as an addon, so it is left alone as a standalone mod with " + linkedTo
+                    + " compatibility -- force-include its tab if you want it folded in anyway";
+        }
         return null;
+    }
+
+    private static boolean looksLikeAddon(ModContainer container, String namespace) {
+        if (KnownAddonCatalog.lists(namespace)) {
+            return true;
+        }
+        String id = namespace.toLowerCase(Locale.ROOT);
+        String name = container.getModInfo().getDisplayName().toLowerCase(Locale.ROOT);
+        if (id.contains(CREATE) || name.contains(CREATE)) {
+            return true;
+        }
+        if (!SimulatedSupport.isLoaded()) {
+            return false;
+        }
+        String simulated = SimulatedSupport.MOD_ID.toLowerCase(Locale.ROOT);
+        return id.contains(simulated) || name.contains(simulated);
     }
 
     public static boolean dependsOn(ResourceLocation tabId, String modId) {
@@ -110,12 +136,24 @@ public final class AddonDetection {
     }
 
     private static boolean dependsOn(ModContainer container, String modId) {
+        return dependencyType(container, modId) != null;
+    }
+
+    private static IModInfo.DependencyType dependencyType(ModContainer container, String modId) {
+        IModInfo.DependencyType best = null;
         for (IModInfo.ModVersion dependency : container.getModInfo().getDependencies()) {
-            if (modId.equals(dependency.getModId())) {
-                return true;
+            if (!modId.equals(dependency.getModId())) {
+                continue;
+            }
+            IModInfo.DependencyType type = dependency.getType();
+            if (type == IModInfo.DependencyType.REQUIRED) {
+                return type;
+            }
+            if (type == IModInfo.DependencyType.OPTIONAL) {
+                best = type;
             }
         }
-        return false;
+        return best;
     }
 }
 

@@ -11,6 +11,10 @@ import org.joml.Matrix4fStack;
 
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.NativeImage;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
+
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
@@ -52,6 +56,10 @@ public final class BannerScreenshot {
         Matrix4fStack modelView = RenderSystem.getModelViewStack();
         modelView.pushMatrix();
 
+        int boundFramebuffer = GlStateManager.getBoundFramebuffer();
+        int[] boundViewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, boundViewport);
+
         NativeImage image;
         try {
             target.bindWrite(true);
@@ -82,7 +90,8 @@ public final class BannerScreenshot {
             modelView.popMatrix();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.restoreProjectionMatrix();
-            mc.getMainRenderTarget().bindWrite(true);
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, boundFramebuffer);
+            GlStateManager._viewport(boundViewport[0], boundViewport[1], boundViewport[2], boundViewport[3]);
             target.destroyBuffers();
         }
 

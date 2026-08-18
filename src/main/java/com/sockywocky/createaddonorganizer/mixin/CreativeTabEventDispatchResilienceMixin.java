@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
+import com.sockywocky.createaddonorganizer.GuardLog;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
 import net.neoforged.bus.api.Event;
@@ -19,9 +20,8 @@ public abstract class CreativeTabEventDispatchResilienceMixin {
         try {
             original.call(event);
         } catch (Throwable t) {
-            createaddonorganizer.LOGGER.error("[CAO] A creative tab's BuildCreativeModeTabContentsEvent listener "
-                    + "(from some other mod) threw; keeping that tab's already-generated items instead of "
-                    + "losing all of them", t);
+            GuardLog.report("A creative tab's BuildCreativeModeTabContentsEvent listener (from some other "
+                    + "mod) threw; keeping that tab's already-generated items instead of losing all of them", t);
             createaddonorganizer.recoverAbortedDispatch(event);
         }
         createaddonorganizer.applyLayoutAfterDispatch(event);

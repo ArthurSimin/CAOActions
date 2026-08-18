@@ -61,11 +61,21 @@ public final class Notice {
     }
 
     public static void show(Component message, int rgb) {
+        post(message, rgb, true);
+    }
+
+    public static void showQuiet(Component message, int rgb) {
+        post(message, rgb, false);
+    }
+
+    private static void post(Component message, int rgb, boolean chime) {
         Notice.message = message;
         Notice.rgb = rgb;
         Notice.shownAtMillis = System.currentTimeMillis();
-        Minecraft.getInstance().getSoundManager()
-                .play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F));
+        if (chime) {
+            Minecraft.getInstance().getSoundManager()
+                    .play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F));
+        }
     }
 
     public static void render(GuiGraphics g, Minecraft mc) {

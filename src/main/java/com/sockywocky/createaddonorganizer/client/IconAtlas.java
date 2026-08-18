@@ -6,7 +6,10 @@ import java.util.Map;
 
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -89,10 +92,22 @@ public final class IconAtlas {
         invalidate();
     }
 
+    private static final int[] boundViewport = new int[4];
+    private static int boundFramebuffer = -1;
+
+    private static void captureTarget() {
+        boundFramebuffer = GlStateManager.getBoundFramebuffer();
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, boundViewport);
+    }
+
     private static void restoreTarget() {
-        if (!CreateCompat.rebindFrame()) {
+        if (boundFramebuffer < 0) {
             Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
+            return;
         }
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, boundFramebuffer);
+        GlStateManager._viewport(boundViewport[0], boundViewport[1], boundViewport[2], boundViewport[3]);
+        boundFramebuffer = -1;
     }
 
     private static boolean ensure() {
@@ -106,6 +121,7 @@ public final class IconAtlas {
         tile = ICON * scale;
         cols = ATLAS / tile;
         capacity = cols * cols;
+        captureTarget();
         target = new TextureTarget(ATLAS, ATLAS, true, Minecraft.ON_OSX);
         target.setClearColor(0f, 0f, 0f, 0f);
         target.setFilterMode(9728);
@@ -172,6 +188,7 @@ public final class IconAtlas {
         Matrix4f oldProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         VertexSorting oldSorting = RenderSystem.getVertexSorting();
 
+        captureTarget();
         target.bindWrite(true);
 
         RenderSystem.enableScissor(tx, ATLAS - ty - tile, tile, tile);

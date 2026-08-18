@@ -132,7 +132,7 @@ public class createaddonorganizer {
             MANAGED_PARENTS.add(SimulatedSupport.MAIN_TAB);
         }
 
-        modEventBus.addListener(EventPriority.HIGHEST, createaddonorganizer::onBuildTabContents);
+        modEventBus.addListener(EventPriority.LOWEST, createaddonorganizer::onBuildTabContents);
     }
 
     private static int listenerInvocationsThisPass = 0;
@@ -244,7 +244,11 @@ public class createaddonorganizer {
                 sectionsBeforePass.put(parent, new ArrayList<>(existing));
             }
             if (SimulatedSupport.isMainTab(parent)) {
-                SimulatedHub.retractAll();
+                if (MANAGED_PARENTS.contains(parent)) {
+                    SimulatedHub.retractAll();
+                } else {
+                    SimulatedHub.releaseAll();
+                }
             } else {
                 dropParentSections(parent);
             }
@@ -302,7 +306,7 @@ public class createaddonorganizer {
                 }
                 SimulatedHub.reorder(ids);
                 NativeSections.adoptAll();
-                SimulatedHub.reorder(Config.applyOrderStable(ids));
+                SimulatedHub.reorder(Config.applyOrderStable(SimulatedHub.orderableInDrawOrder()));
                 addonCount += addons.size();
                 continue;
             }
@@ -1025,7 +1029,7 @@ public class createaddonorganizer {
                 MANAGED_PARENTS.remove(parent);
                 dropped.add(parent);
                 if (SimulatedSupport.isMainTab(parent)) {
-                    SimulatedHub.retractAll();
+                    SimulatedHub.releaseAll();
                 } else {
                     dropParentSections(parent);
                 }

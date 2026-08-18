@@ -33,6 +33,12 @@ public final class CreateCompat {
         }
     }
 
+    public static void discardStaleFrame() {
+        if (available()) {
+            com.sockywocky.createaddonorganizer.client.create.CreateSkin.discardStaleFrame();
+        }
+    }
+
     public static boolean rebindFrame() {
         return available() && com.sockywocky.createaddonorganizer.client.create.CreateSkin.rebindFrame();
     }

@@ -52,6 +52,10 @@ public final class CreateSkin {
         return swapped;
     }
 
+    public static void discardStaleFrame() {
+        swapped = false;
+    }
+
     public static boolean rebindFrame() {
         if (!swapped || UIRenderHelper.framebuffer == null) {
             return false;

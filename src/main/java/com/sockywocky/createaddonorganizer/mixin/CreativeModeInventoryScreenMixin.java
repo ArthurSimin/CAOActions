@@ -97,10 +97,16 @@ public abstract class CreativeModeInventoryScreenMixin {
         ItemGroupSlots.renderRuns((CreativeModeInventoryScreen) (Object) this, guiGraphics);
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
+    @Inject(method = "render", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screens/inventory/CreativeModeInventoryScreen;renderTooltip(Lnet/minecraft/client/gui/GuiGraphics;II)V"))
     private void createaddonorganizer$renderSectionIndex(GuiGraphics guiGraphics, int mouseX, int mouseY,
             float partialTick, CallbackInfo ci) {
         SectionIndexPanel.render((CreativeModeInventoryScreen) (Object) this, guiGraphics, mouseX, mouseY);
+    }
+
+    @Inject(method = "render", at = @At("TAIL"))
+    private void createaddonorganizer$afterCreativeRender(GuiGraphics guiGraphics, int mouseX, int mouseY,
+            float partialTick, CallbackInfo ci) {
         CollapseSync.tick();
         CondensedCreativeSupport.consumeResync(this);
 

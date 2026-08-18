@@ -93,6 +93,21 @@ public final class ConfigMigration {
         MOVES.put(oldSection + "." + key, newSection + "." + key);
     }
 
+    private static final String MENU_FRAMERATE = "performance.menuFramerate";
+    private static final int RETIRED_MENU_FRAMERATE = 120;
+
+    private static boolean retireMenuFramerateBoost(CommentedFileConfig config) {
+        Object raw = config.getRaw(MENU_FRAMERATE);
+        if (!(raw instanceof Number number) || number.intValue() != RETIRED_MENU_FRAMERATE) {
+            return false;
+        }
+        config.set(MENU_FRAMERATE, 60);
+        createaddonorganizer.LOGGER.info("[CAO] menuFramerate was still at the old default of {}; it now defaults "
+                + "to vanilla's 60 because raising it can make menus beat against V-Sync -- set it back if you "
+                + "prefer the smoother menus", RETIRED_MENU_FRAMERATE);
+        return true;
+    }
+
     public static void run() {
         Path file = FMLPaths.CONFIGDIR.get().resolve(FILE_NAME);
         if (!Files.isRegularFile(file)) {
@@ -109,8 +124,11 @@ public final class ConfigMigration {
                 config.remove(entry.getKey());
                 moved++;
             }
-            if (moved > 0) {
+            boolean retired = retireMenuFramerateBoost(config);
+            if (moved > 0 || retired) {
                 config.save();
+            }
+            if (moved > 0) {
                 createaddonorganizer.LOGGER.info("[CAO] moved {} setting(s) into the reorganised config layout",
                         moved);
             }
