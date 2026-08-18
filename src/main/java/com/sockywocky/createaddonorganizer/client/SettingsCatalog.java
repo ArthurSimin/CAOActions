@@ -9,7 +9,6 @@ import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import com.sockywocky.createaddonorganizer.Config;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
-import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -34,6 +33,7 @@ public final class SettingsCatalog {
     public record Category(String key, Component label, List<Group> groups) {}
 
     private static final String PREFIX = createaddonorganizer.MODID + ".configuration.";
+    public static final String DEV_SECTION = "devmode";
     private static final long SLIDER_SPAN_LIMIT = 4096L;
 
     private SettingsCatalog() {}
@@ -50,6 +50,9 @@ public final class SettingsCatalog {
             Object node = entry.getRawValue();
             Object values = valueTree.get(List.of(key));
             if (node instanceof UnmodifiableConfig section && values instanceof UnmodifiableConfig sectionValues) {
+                if (DEV_SECTION.equals(key) && !DevMode.isUnlocked()) {
+                    continue;
+                }
                 Category category = category(key, section, sectionValues);
                 if (category != null) {
                     categories.add(category);
@@ -119,17 +122,13 @@ public final class SettingsCatalog {
     }
 
     private static Component label(String key) {
-        String lang = PREFIX + key;
-        return Language.getInstance().has(lang) ? Component.translatable(lang) : Component.literal(prettify(key));
+        return Component.translatableWithFallback(PREFIX + key, prettify(key));
     }
 
     private static Component description(String key, ModConfigSpec.ValueSpec spec) {
         String translation = spec.getTranslationKey();
         String lang = (translation != null ? translation : PREFIX + key) + ".tooltip";
-        if (Language.getInstance().has(lang)) {
-            return Component.translatable(lang);
-        }
-        return Component.literal(comment(spec.getComment()));
+        return Component.translatableWithFallback(lang, comment(spec.getComment()));
     }
 
     private static String comment(String raw) {

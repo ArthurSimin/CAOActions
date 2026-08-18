@@ -5,6 +5,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.sockywocky.createaddonorganizer.client.ItemGroupSlots;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -23,6 +25,13 @@ public class AbstractContainerScreenMixin {
                 && slot.getClass().getName().endsWith("CustomCreativeSlot")
                 && !slot.hasItem()) {
             ci.cancel();
+        }
+    }
+
+    @Inject(method = "renderSlot", at = @At("TAIL"))
+    private void createaddonorganizer$itemGroupBadge(GuiGraphics guiGraphics, Slot slot, CallbackInfo ci) {
+        if ((Object) this instanceof CreativeModeInventoryScreen screen) {
+            ItemGroupSlots.renderBadge(screen, guiGraphics, slot);
         }
     }
 }

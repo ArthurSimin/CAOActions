@@ -25,6 +25,7 @@ public final class ScreenSwoosh {
     private static boolean vertical;
     private static Supplier<Screen> pending;
     private static boolean swapScheduled;
+    private static boolean fadeOnly;
 
     private ScreenSwoosh() {
     }
@@ -63,6 +64,7 @@ public final class ScreenSwoosh {
         }
         direction = depthSign() * FORWARD;
         vertical = depthVertical();
+        fadeOnly = true;
         pending = null;
         swapScheduled = true;
         phase = Phase.ENTER_ARMED;
@@ -83,6 +85,7 @@ public final class ScreenSwoosh {
         }
         direction = dir;
         vertical = onYAxis;
+        fadeOnly = false;
         pending = next;
         swapScheduled = false;
         phase = Phase.EXIT;
@@ -151,7 +154,7 @@ public final class ScreenSwoosh {
     }
 
     private static float travelOffset() {
-        if (phase != Phase.EXIT && phase != Phase.ENTER) {
+        if (fadeOnly || (phase != Phase.EXIT && phase != Phase.ENTER)) {
             return 0f;
         }
         float travel = Config.swooshTravel();

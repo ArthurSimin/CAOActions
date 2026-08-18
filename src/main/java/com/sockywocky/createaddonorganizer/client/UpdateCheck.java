@@ -37,12 +37,18 @@ public final class UpdateCheck {
 
     private record RemoteVersion(String version_number, String[] game_versions, String[] loaders) {}
 
+    private static final String FAKE_VERSION = "9.9.9";
+
     public static boolean available() {
-        return latest != null;
+        return latest != null || fakeAvailable();
     }
 
     public static String latestVersion() {
-        return latest;
+        return latest != null ? latest : fakeAvailable() ? FAKE_VERSION : null;
+    }
+
+    private static boolean fakeAvailable() {
+        return DevMode.isUnlocked() && Config.devFakeUpdate();
     }
 
     public static void syncAsync() {

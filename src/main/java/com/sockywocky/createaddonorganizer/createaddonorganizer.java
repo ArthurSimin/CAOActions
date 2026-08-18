@@ -914,6 +914,12 @@ public class createaddonorganizer {
         NativeItemsStore.flush();
     }
 
+    public static void rebuildTab(CreativeModeTab.ItemDisplayParameters params, ResourceLocation tabId) {
+        if (tabId != null && params != null) {
+            rebuildTabs(Set.of(tabId), params);
+        }
+    }
+
     public static void refreshTabRows(CreativeModeTab.ItemDisplayParameters params, ResourceLocation tabId) {
         if (tabId == null || params == null) {
             return;
@@ -923,6 +929,7 @@ public class createaddonorganizer {
         rebuildTabs(ids, params);
         lastReconciledTab = null;
         BannerRenderer.CURRENT_TAB = null;
+        refreshOpenCreativeScreen();
         CondensedCreativeSupport.requestResync();
     }
 

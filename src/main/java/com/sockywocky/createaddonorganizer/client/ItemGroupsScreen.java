@@ -156,12 +156,12 @@ public class ItemGroupsScreen extends Screen {
 
         @Override
         public List<? extends GuiEventListener> children() {
-            return List.of();
+            return RowChildren.none();
         }
 
         @Override
         public List<? extends NarratableEntry> narratables() {
-            return List.of();
+            return RowChildren.none();
         }
 
         @Override
@@ -180,10 +180,13 @@ public class ItemGroupsScreen extends Screen {
             if (hovered) {
                 g.fill(left, top, left + rowWidth, top + rowHeight, 0x30FFFFFF);
             }
+            int chipY = top + (rowHeight - 12) / 2;
+            g.fill(left + 3, chipY, left + 6, chipY + 12, ItemGroupColors.iconEdge(layout, group.id()));
+
             String iconId = layout.iconItemOf(group.id());
             ItemStack icon = iconId == null ? ItemStack.EMPTY : ItemLibrary.stackOf(iconId);
-            SafeIcon.render(g, icon, left + 3, top + (rowHeight - 16) / 2);
-            g.drawString(ItemGroupsScreen.this.font, group.displayTitle(), left + 25,
+            SafeIcon.render(g, icon, left + 10, top + (rowHeight - 16) / 2);
+            g.drawString(ItemGroupsScreen.this.font, group.displayTitle(), left + 32,
                     top + (rowHeight - 8) / 2, 0xFFFFFFFF);
 
             Component meta = Component.translatable("createaddonorganizer.groups.rowMeta",

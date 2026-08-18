@@ -722,6 +722,35 @@ public class Config {
         BUILDER.pop();
     }
 
+    static {
+        BUILDER.comment("Switches only the dev-mode overlay exposes. They stay in the file when dev mode is",
+                        "off, but nothing reads them until it is unlocked.")
+                .push("devmode");
+    }
+
+    public static final ModConfigSpec.BooleanValue DEV_FPS_DISPLAY = BUILDER
+            .comment("The frame-time panel in the corner: current and worst frame, and where the time went.")
+            .define("fpsDisplay", true);
+
+    public static final ModConfigSpec.BooleanValue DEV_FAKE_UPDATE = BUILDER
+            .comment("Pretend a newer version is on Modrinth, so the update prompt can be checked without",
+                    "waiting for a real release.")
+            .define("fakeUpdateAvailable", false);
+
+    public static final ModConfigSpec.BooleanValue DEV_ALL_BANNER_POOLS = BUILDER
+            .comment("Show every shipped banner in the picker instead of only the ones a section is allowed.")
+            .define("unrestrictedBannerPools", false);
+
+    public static final ModConfigSpec.BooleanValue DEV_TEXT_EDITOR = BUILDER
+            .comment("Edit any on-screen wording in place. Hover a line and press the Edit Hovered Text key to",
+                    "rewrite it; the overlay key outlines everything the editor can reach. Edits land in the",
+                    "mod's own lang file when the game is running from source, otherwise in a config override.")
+            .define("textEditor", true);
+
+    static {
+        BUILDER.pop();
+    }
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     public static ModConfigSpec spec() {
@@ -734,6 +763,22 @@ public class Config {
 
     public static boolean checkForUpdates() {
         return CHECK_FOR_UPDATES.get();
+    }
+
+    public static boolean devFpsDisplay() {
+        return DEV_FPS_DISPLAY.get();
+    }
+
+    public static boolean devFakeUpdate() {
+        return DEV_FAKE_UPDATE.get();
+    }
+
+    public static boolean devAllBannerPools() {
+        return DEV_ALL_BANNER_POOLS.get();
+    }
+
+    public static boolean devTextEditor() {
+        return DEV_TEXT_EDITOR.get();
     }
 
     public static void resetAllToDefault() {
@@ -879,7 +924,16 @@ public class Config {
 
     private static void restoreEntries(Map<ModConfigSpec.ConfigValue<List<? extends String>>, List<String>> saved) {
         for (Map.Entry<ModConfigSpec.ConfigValue<List<? extends String>>, List<String>> e : saved.entrySet()) {
-            List<String> merged = new ArrayList<>(e.getKey().get());
+            Set<String> restored = new HashSet<>();
+            for (String entry : e.getValue()) {
+                restored.add(entry.split("=", 2)[0].trim());
+            }
+            List<String> merged = new ArrayList<>();
+            for (String entry : e.getKey().get()) {
+                if (!restored.contains(entry.split("=", 2)[0].trim())) {
+                    merged.add(entry);
+                }
+            }
             merged.addAll(e.getValue());
             e.getKey().set(merged);
         }

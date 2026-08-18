@@ -37,8 +37,10 @@ public final class TabManager {
         AbsorbedTabs.IDS.add(id);
         if (SimulatedSupport.isMainTab(hub)) {
             CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.get(id);
-            SimulatedHub.inject(id, tab.getDisplayName());
-            SimulatedHub.foldItems(id, tab.getDisplayItems());
+            if (tab != null) {
+                SimulatedHub.inject(id, tab.getDisplayName());
+                SimulatedHub.foldItems(id, tab.getDisplayItems());
+            }
         } else {
             Section<?> section = createaddonorganizer.sectionFromLiveTab(id);
             if (section != null) {

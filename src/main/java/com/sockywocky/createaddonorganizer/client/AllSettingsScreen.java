@@ -15,10 +15,8 @@ import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.neoforged.fml.ModContainer;
@@ -71,7 +69,7 @@ public class AllSettingsScreen extends Screen {
     private static final ResourceLocation VANILLA_FIELD_FOCUS =
             ResourceLocation.withDefaultNamespace("widget/text_field_highlighted");
 
-    private enum Page { SETTINGS, CREDITS, BUGS }
+    private enum Page { SETTINGS, CREDITS, BUGS, INTEGRATIONS }
 
     private enum RowKind { HEADER, CARD, PREVIEW }
 
@@ -84,10 +82,13 @@ public class AllSettingsScreen extends Screen {
     private final Scrollbar bar = new Scrollbar();
     private final SlidePreview preview = new SlidePreview();
     private final InfoPane infoPane = new InfoPane(this);
+    private final PanelSlide slide = new PanelSlide();
     private final GlassSidebar sidebar;
 
     private static int lastCategory;
     private static String lastQuery = "";
+
+    private boolean builtUnlocked;
 
     private Page page = Page.SETTINGS;
     private int selected;
@@ -107,6 +108,8 @@ public class AllSettingsScreen extends Screen {
     private long frameNanos;
     private final GlassArrow backArrow = new GlassArrow();
     private SettingsCatalog.Option dragging;
+    private SettingsCatalog.Option sliderEditOption;
+    private EditBox sliderEditBox;
     private SettingsCatalog.Option openChoice;
     private int choiceX;
     private int choiceY;
@@ -126,8 +129,10 @@ public class AllSettingsScreen extends Screen {
 
     @Override
     protected void init() {
-        if (categories.isEmpty()) {
+        if (categories.isEmpty() || builtUnlocked != DevMode.isUnlocked()) {
+            categories.clear();
             categories.addAll(SettingsCatalog.build());
+            builtUnlocked = DevMode.isUnlocked();
             selected = Mth.clamp(lastCategory, 0, Math.max(0, categories.size() - 1));
             query = lastQuery;
         }
@@ -168,6 +173,7 @@ public class AllSettingsScreen extends Screen {
         for (int i = 0; i < categories.size(); i++) {
             int index = i;
             sidebar.rows().add(GlassSidebar.Row.of(categories.get(i).label(), () -> {
+                slide.play(navIndex(), index);
                 page = Page.SETTINGS;
                 selected = index;
                 lastCategory = selected;
@@ -180,7 +186,17 @@ public class AllSettingsScreen extends Screen {
         sidebar.rows().add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.credits.clearCache"),
                 RemoteCache::clearAllReporting));
         sidebar.rows().add(GlassSidebar.Row.gap());
+        sidebar.rows().add(GlassSidebar.Row.of(
+                Component.translatable("createaddonorganizer.integrations.title"), () -> {
+                    slide.play(navIndex(), categories.size());
+                    page = Page.INTEGRATIONS;
+                    clearSearch();
+                    bar.reset();
+                    infoPane.resetScroll();
+                    rebuild();
+                }).active(() -> page == Page.INTEGRATIONS));
         sidebar.rows().add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.colors.credits"), () -> {
+            slide.play(navIndex(), categories.size() + 1);
             page = Page.CREDITS;
             clearSearch();
             bar.reset();
@@ -188,6 +204,7 @@ public class AllSettingsScreen extends Screen {
             rebuild();
         }).active(() -> page == Page.CREDITS));
         sidebar.rows().add(GlassSidebar.Row.of(Component.translatable("createaddonorganizer.bugreport.title"), () -> {
+            slide.play(navIndex(), categories.size() + 2);
             page = Page.BUGS;
             clearSearch();
             bar.reset();
@@ -204,7 +221,17 @@ public class AllSettingsScreen extends Screen {
         rebuild();
     }
 
+    private int navIndex() {
+        return switch (page) {
+            case INTEGRATIONS -> categories.size();
+            case CREDITS -> categories.size() + 1;
+            case BUGS -> categories.size() + 2;
+            default -> selected;
+        };
+    }
+
     private void rebuild() {
+        closeSliderEdit(false);
         for (ValueBox box : boxes) {
             removeWidget(box);
         }
@@ -215,7 +242,11 @@ public class AllSettingsScreen extends Screen {
             buildSettings();
         } else {
             infoPane.setBounds(contentX, listTop, contentW, listBottom - listTop);
-            infoPane.build(page == Page.CREDITS ? InfoPane.Kind.CREDITS : InfoPane.Kind.BUGS, this.font);
+            infoPane.build(switch (page) {
+                case CREDITS -> InfoPane.Kind.CREDITS;
+                case INTEGRATIONS -> InfoPane.Kind.INTEGRATIONS;
+                default -> InfoPane.Kind.BUGS;
+            }, this.font);
         }
         layoutRows();
     }
@@ -358,7 +389,7 @@ public class AllSettingsScreen extends Screen {
     }
 
     private void click() {
-        this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        Sfx.uiClick();
     }
 
     @Override
@@ -376,6 +407,7 @@ public class AllSettingsScreen extends Screen {
         panel(g, contentX, panelY, contentW, panelH);
 
         renderSearch(g, mouseX, mouseY);
+        slide.begin(g);
         if (page == Page.SETTINGS) {
             renderRows(g, mouseX, mouseY, delta);
         } else {
@@ -386,6 +418,7 @@ public class AllSettingsScreen extends Screen {
         for (Renderable renderable : this.renderables) {
             renderable.render(g, mouseX, mouseY, partialTick);
         }
+        slide.end(g);
 
         renderBackArrow(g, mouseX, mouseY, delta);
         renderChoicePopup(g, mouseX, mouseY);
@@ -625,9 +658,28 @@ public class AllSettingsScreen extends Screen {
                 int labelWidth = this.font.width(label);
                 int x = right - SLIDER_W;
                 int y = middle - SLIDER_H / 2;
+                if (sliderEditOption == option && sliderEditBox != null) {
+                    int boxX = x - 6 - labelWidth;
+                    int boxW = right - boxX;
+                    int boxY = middle - BOX_H / 2;
+                    if (vanilla()) {
+                        g.blitSprite(VANILLA_FIELD_FOCUS, boxX, boxY, boxW, BOX_H);
+                    } else {
+                        g.fill(boxX, boxY, boxX + boxW, boxY + BOX_H, cardColor(true));
+                        outline(g, boxX, boxY, boxW, BOX_H, hoverLine(true));
+                    }
+                    sliderEditBox.setX(boxX + 4);
+                    sliderEditBox.setY(boxY + (BOX_H - 8) / 2);
+                    sliderEditBox.setWidth(boxW - 8);
+                    sliderEditBox.render(g, mouseX, mouseY, 0f);
+                    return;
+                }
                 g.drawString(this.font, label, x - 6 - labelWidth, middle - 4, bodyTextColor(), shadow());
-                slider(g, x, y, sliderFraction(option), inside(mouseX, mouseY, x, y, SLIDER_W, SLIDER_H)
-                        || dragging == option);
+                boolean overSlider = inside(mouseX, mouseY, x, y, SLIDER_W, SLIDER_H);
+                slider(g, x, y, sliderFraction(option), overSlider || dragging == option);
+                if (overSlider && hoverTip == null) {
+                    hoverTip = Component.translatable("createaddonorganizer.settings.slider.typeHint");
+                }
             }
             case NUMBER, TEXT -> positionBox(g, row, right - boxFrameWidth(row), middle - BOX_H / 2,
                     mouseX, mouseY);
@@ -731,6 +783,71 @@ public class AllSettingsScreen extends Screen {
         }
     }
 
+    private void openSliderEdit(SettingsCatalog.Option option) {
+        closeSliderEdit(false);
+        sliderEditOption = option;
+        sliderEditBox = new EditBox(this.font, 0, 0, SLIDER_W, BOX_H, option.title());
+        sliderEditBox.setBordered(false);
+        sliderEditBox.setMaxLength(24);
+        sliderEditBox.setValue(sliderLabel(option));
+        sliderEditBox.setTextColor(titleTextColor());
+        sliderEditBox.moveCursorToEnd(false);
+        sliderEditBox.setHighlightPos(0);
+        addWidget(sliderEditBox);
+        setFocused(sliderEditBox);
+        sliderEditBox.setFocused(true);
+    }
+
+    private void closeSliderEdit(boolean commit) {
+        if (sliderEditOption == null) {
+            return;
+        }
+        SettingsCatalog.Option option = sliderEditOption;
+        EditBox box = sliderEditBox;
+        sliderEditOption = null;
+        sliderEditBox = null;
+        if (box != null) {
+            removeWidget(box);
+            if (getFocused() == box) {
+                setFocused(null);
+            }
+        }
+        if (!commit || box == null) {
+            return;
+        }
+        Object parsed = parseSliderValue(option, box.getValue());
+        if (parsed != null) {
+            SettingsCatalog.apply(option, parsed);
+            preview.restart();
+            layoutRows();
+        }
+    }
+
+    private static Object parseSliderValue(SettingsCatalog.Option option, String text) {
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            if (option.current() instanceof Integer) {
+                ModConfigSpec.Range<Integer> range = option.spec().getRange();
+                int value = (int) Math.round(Double.parseDouble(trimmed));
+                if (range != null) {
+                    value = Mth.clamp(value, range.getMin(), range.getMax());
+                }
+                return SettingsCatalog.accepts(option, value) ? value : null;
+            }
+            ModConfigSpec.Range<Double> range = option.spec().getRange();
+            double value = Math.round(Double.parseDouble(trimmed) * 100d) / 100d;
+            if (range != null) {
+                value = Mth.clamp(value, range.getMin(), range.getMax());
+            }
+            return SettingsCatalog.accepts(option, value) ? value : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private void toggle(GuiGraphics g, int x, int y, float progress, boolean hovered) {
         float eased = progress * progress * (3f - 2f * progress);
         int off = MenuSkin.mutedColor(0xFF5A5A5A);
@@ -785,6 +902,10 @@ public class AllSettingsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (sliderEditOption != null && sliderEditBox != null
+                && !sliderEditBox.isMouseOver(mouseX, mouseY)) {
+            closeSliderEdit(true);
+        }
         if (openChoice != null) {
             handleChoiceClick(mouseX, mouseY);
             return true;
@@ -898,6 +1019,14 @@ public class AllSettingsScreen extends Screen {
             }
             case SLIDER -> {
                 int x = right - SLIDER_W;
+                int labelWidth = this.font.width(sliderLabel(option));
+                if (hasControlDown()
+                        && inside(mouseX, mouseY, x - 6 - labelWidth, middle - BOX_H / 2,
+                                SLIDER_W + 6 + labelWidth, BOX_H)) {
+                    click();
+                    openSliderEdit(option);
+                    return true;
+                }
                 if (inside(mouseX, mouseY, x, middle - SLIDER_H / 2, SLIDER_W, SLIDER_H)) {
                     dragging = option;
                     applySlider(option, (mouseX - x - 2) / (SLIDER_W - 4d), false);
@@ -1015,6 +1144,16 @@ public class AllSettingsScreen extends Screen {
             openChoice = null;
             return true;
         }
+        if (sliderEditOption != null) {
+            if (keyCode == 257 || keyCode == 335) {
+                closeSliderEdit(true);
+                return true;
+            }
+            if (keyCode == 256) {
+                closeSliderEdit(false);
+                return true;
+            }
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
@@ -1040,6 +1179,7 @@ public class AllSettingsScreen extends Screen {
 
     @Override
     public void onClose() {
+        closeSliderEdit(true);
         for (ValueBox box : boxes) {
             box.commit();
         }

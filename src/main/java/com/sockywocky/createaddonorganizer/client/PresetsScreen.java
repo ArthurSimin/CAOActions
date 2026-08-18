@@ -321,12 +321,12 @@ public class PresetsScreen extends Screen implements EmbeddedPane {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return List.of(edit);
+                return RowChildren.of(edit);
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return List.of(edit);
+                return RowChildren.of(edit);
             }
 
             @Override

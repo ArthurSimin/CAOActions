@@ -34,6 +34,10 @@ public final class Sfx {
         mc.getSoundManager().play(SimpleSoundInstance.forUI(sound, pitch, volume));
     }
 
+    public static void uiClick() {
+        play(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 0.25f);
+    }
+
     public static void grab() {
         if (!Config.sfxOn(Config.SFX_GRAB)) {
             return;

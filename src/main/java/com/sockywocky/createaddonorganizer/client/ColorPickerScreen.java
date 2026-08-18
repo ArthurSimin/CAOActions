@@ -457,7 +457,8 @@ public class ColorPickerScreen extends Screen {
             galleryList = new GalleryList(this.minecraft, listRegionW(), listBottom - listTop, listTop,
                     BannerTextures.HEIGHT + 6);
             galleryList.setX(contentX);
-            boolean restrict = hasPool && !DevMode.isUnlocked() && !Config.showAllBanners();
+            boolean restrict = hasPool && !Config.showAllBanners()
+                    && !(DevMode.isUnlocked() && Config.devAllBannerPools());
             Collection<String> refs;
             if (restrict) {
                 LinkedHashSet<String> merged = new LinkedHashSet<>(pool);
@@ -1498,12 +1499,12 @@ public class ColorPickerScreen extends Screen {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override
@@ -1611,12 +1612,12 @@ public class ColorPickerScreen extends Screen {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override

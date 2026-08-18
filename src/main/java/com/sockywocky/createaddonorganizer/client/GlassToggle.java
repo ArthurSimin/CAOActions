@@ -1,5 +1,7 @@
 package com.sockywocky.createaddonorganizer.client;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import com.sockywocky.createaddonorganizer.Config;
@@ -20,16 +22,23 @@ public class GlassToggle extends AbstractButton {
     private static final int LABEL_GAP = 6;
     private static final float SECONDS = 0.14f;
 
+    private static final Map<String, Float> PROGRESS = new HashMap<>();
+
     private final Consumer<Boolean> onChange;
+    private String key;
     private boolean selected;
-    private float progress;
     private long frameNanos;
 
     public GlassToggle(int x, int y, Component label, boolean selected, Consumer<Boolean> onChange) {
         super(x, y, TRACK_W + LABEL_GAP + Minecraft.getInstance().font.width(label), HEIGHT, label);
         this.selected = selected;
-        this.progress = selected ? 1f : 0f;
+        this.key = label.getString();
         this.onChange = onChange;
+    }
+
+    public GlassToggle key(String value) {
+        this.key = value;
+        return this;
     }
 
     public boolean selected() {
@@ -77,14 +86,16 @@ public class GlassToggle extends AbstractButton {
     private float advance() {
         float target = selected ? 1f : 0f;
         if (!Config.animOn(Config.ANIM_BUTTON_HOVER)) {
-            progress = target;
+            PROGRESS.put(key, target);
             return target;
         }
+        float progress = PROGRESS.getOrDefault(key, target);
         long now = System.nanoTime();
         float delta = frameNanos == 0L ? 0f : Math.min(0.25f, (now - frameNanos) / 1_000_000_000f);
         frameNanos = now;
         float step = delta / SECONDS;
         progress = progress < target ? Math.min(target, progress + step) : Math.max(target, progress - step);
+        PROGRESS.put(key, progress);
         return progress * progress * (3f - 2f * progress);
     }
 }

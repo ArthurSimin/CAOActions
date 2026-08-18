@@ -51,7 +51,7 @@ public final class BannerEditor {
         return owner != null && isRealTab(owner);
     }
 
-    private static boolean isRealTab(ResourceLocation id) {
+    public static boolean isRealTab(ResourceLocation id) {
         return BuiltInRegistries.CREATIVE_MODE_TAB.containsKey(id) || TabLayoutStore.hasLayout(id);
     }
 

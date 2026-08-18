@@ -143,6 +143,7 @@ public class SectionColorsScreen extends Screen {
     private int tipRight;
     private GlassSidebar sidebar;
     private final InfoPane infoPane = new InfoPane(this);
+    private final PanelSlide slide = new PanelSlide();
     private InfoPane.Kind infoPage;
     private Screen pane;
     private ColorPickerScreen editor;
@@ -356,18 +357,46 @@ public class SectionColorsScreen extends Screen {
         listCenterX = contentX + contentW / 2;
     }
 
+    private int contentNav() {
+        if (editor != null) {
+            return 6;
+        }
+        if (infoPage == InfoPane.Kind.BUGS) {
+            return 5;
+        }
+        if (infoPage == InfoPane.Kind.CREDITS) {
+            return 4;
+        }
+        if (pane instanceof MenuStyleScreen) {
+            return 3;
+        }
+        if (pane instanceof PresetsScreen) {
+            return 2;
+        }
+        if (pane instanceof AddSectionScreen) {
+            return 1;
+        }
+        return 0;
+    }
+
+    private void navTo(int target) {
+        slide.play(contentNav(), target);
+    }
+
     private void openEmbedded(ColorPickerScreen next) {
         if (classic) {
             ScreenSwoosh.drill(() -> next, Config.SWOOSH_BANNER_EDITOR);
             return;
         }
         lastScroll = list != null ? list.getScrollAmount() : lastScroll;
+        navTo(6);
         infoPage = null;
         editor = next;
         rebuildWidgets();
     }
 
     private void closeEditor() {
+        navTo(0);
         editor = null;
         rebuildWidgets();
     }
@@ -403,6 +432,7 @@ public class SectionColorsScreen extends Screen {
     }
 
     private void openPane(Screen next) {
+        navTo(next instanceof AddSectionScreen ? 1 : next instanceof PresetsScreen ? 2 : 3);
         if (editor != null) {
             editor.releaseEmbedded();
             editor = null;
@@ -456,6 +486,7 @@ public class SectionColorsScreen extends Screen {
         if (pane == null) {
             return;
         }
+        navTo(0);
         pane = null;
         rebuildWidgets();
     }
@@ -464,6 +495,7 @@ public class SectionColorsScreen extends Screen {
         if (infoPage == kind) {
             return;
         }
+        navTo(kind == InfoPane.Kind.BUGS ? 5 : 4);
         pane = null;
         if (editor != null) {
             editor.releaseEmbedded();
@@ -478,6 +510,7 @@ public class SectionColorsScreen extends Screen {
         if (infoPage == null) {
             return;
         }
+        navTo(0);
         infoPage = null;
         rebuildWidgets();
     }
@@ -486,6 +519,7 @@ public class SectionColorsScreen extends Screen {
         if (sidebar == null) {
             sidebar = new GlassSidebar(container, this::onClose)
                     .title(Component.translatable("createaddonorganizer.colors.sidebar.title"))
+                    .shine(true)
                     .onUpdate(() -> Util.getPlatform().openUri(UpdateCheck.PAGE_URL))
                     .onFolder(() -> Util.getPlatform().openPath(FMLPaths.CONFIGDIR.get()),
                             Component.translatable("createaddonorganizer.settings.openFolder"));
@@ -589,7 +623,7 @@ public class SectionColorsScreen extends Screen {
 
 
     private void openTabRename(SectionCatalog.Entry entry) {
-        if (TabLayoutStore.byId(entry.id()) == null) {
+        if (!BannerEditor.isRealTab(entry.id())) {
             Notice.show(Component.translatable("createaddonorganizer.colors.tabName.notEditable", entry.name()),
                     Notice.RED);
             return;
@@ -661,7 +695,8 @@ public class SectionColorsScreen extends Screen {
                     MenuSkin.bodyColor(0xFF8A9AA8));
             if (!primeWorkDone) {
                 primeWorkDone = ClientRegistries.advancePrime(PRIME_BUDGET_NANOS);
-            } else if (elapsed >= LoadingSpinner.cycleMs()) {
+            }
+            if (primeWorkDone) {
                 priming = false;
                 rebuildWidgets();
             }
@@ -679,11 +714,13 @@ public class SectionColorsScreen extends Screen {
         if (pane != null || editor != null) {
             sidebar.layout();
             sidebar.render(g, this.font, mouseX, mouseY);
+            slide.begin(g);
             if (pane != null) {
                 pane.render(g, mouseX, mouseY, partialTick);
             } else {
                 editor.render(g, mouseX, mouseY, partialTick);
             }
+            slide.end(g);
             renderArrows(g, mouseX, mouseY, delta);
             renderBackArrow(g, mouseX, mouseY, delta);
             Component paneHover = hoverPreviewTooltip != null ? hoverPreviewTooltip : sidebar.hoverTip();
@@ -701,7 +738,9 @@ public class SectionColorsScreen extends Screen {
         } else if (infoPage != null) {
             sidebar.layout();
             sidebar.render(g, this.font, mouseX, mouseY);
+            slide.begin(g);
             infoPane.render(g, this.font, mouseX, mouseY);
+            slide.end(g);
             hoverPreviewTooltip = infoPane.hoverTip();
         } else {
             renderContentChrome(g, mouseX, mouseY);
@@ -1136,6 +1175,7 @@ public class SectionColorsScreen extends Screen {
         }
         if (button == 0 && paneOpen()
                 && GlassArrow.contains(mouseX, mouseY, backArrowX(), backArrowY())) {
+            Sfx.uiClick();
             closeOpenPane();
             return true;
         }
@@ -1182,10 +1222,12 @@ public class SectionColorsScreen extends Screen {
     private boolean sideArrowClicked(double mouseX, double mouseY) {
         int arrowY = GlassArrow.top(this.height);
         if (GlassArrow.contains(mouseX, mouseY, GlassArrow.leftX(), arrowY)) {
+            Sfx.uiClick();
             ScreenSwoosh.pull(() -> new AllSettingsScreen(this, container), Config.SWOOSH_ARROW_LEFT);
             return true;
         }
         if (GlassArrow.contains(mouseX, mouseY, GlassArrow.rightX(this.width), arrowY)) {
+            Sfx.uiClick();
             ScreenSwoosh.push(() -> new TabStudioScreen(this), Config.SWOOSH_ARROW_RIGHT);
             return true;
         }
@@ -1312,6 +1354,9 @@ public class SectionColorsScreen extends Screen {
     }
 
     private void saveOrder() {
+        if (pendingOrder == null) {
+            return;
+        }
         List<ResourceLocation> ids = new ArrayList<>();
         Map<ResourceLocation, List<ResourceLocation>> byParent = new LinkedHashMap<>();
         for (SectionCatalog.Entry entry : pendingOrder) {
@@ -1490,7 +1535,9 @@ public class SectionColorsScreen extends Screen {
         @Override
         public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             glide.beforeRender(this);
+            SectionColorsScreen.this.slide.begin(g);
             super.renderWidget(g, mouseX, mouseY, partialTick);
+            SectionColorsScreen.this.slide.end(g);
 
             if (dragRow != null && dragActive) {
                 int left = getRowLeft();
@@ -1643,7 +1690,9 @@ public class SectionColorsScreen extends Screen {
         List<SectionCatalog.Entry> currentEntries() {
             List<SectionCatalog.Entry> out = new ArrayList<>(children().size());
             for (Row row : children()) {
-                out.add(row.data);
+                if (!row.sliver) {
+                    out.add(row.data);
+                }
             }
             return out;
         }
@@ -1684,6 +1733,7 @@ public class SectionColorsScreen extends Screen {
             private float slideFrom;
             private int slideTarget;
             private long slideStart;
+            private List<AbstractWidget> widgets;
 
             private float slideOffset() {
                 float t = Mth.clamp((System.currentTimeMillis() - slideStart) / (float) SLIDE_MS, 0f, 1f);
@@ -1725,7 +1775,7 @@ public class SectionColorsScreen extends Screen {
                                             b -> SectionColorsScreen.this.openEditor(data))
                                     .size(44, 20).build());
                 }
-                this.tab = !sliver && !entry.readOnly() && !SectionColorsScreen.this.classic
+                this.tab = sliver && !entry.readOnly() && !SectionColorsScreen.this.classic
                         && BannerEditor.isEditableInTabCreator(entry.id())
                                 ? Button.builder(Component.translatable("createaddonorganizer.colors.panel.tabCreator"),
                                                 b -> BannerEditor.openInTabCreator(SectionColorsScreen.this, data.id()))
@@ -1749,6 +1799,11 @@ public class SectionColorsScreen extends Screen {
                     edit.setX(left + rowWidth - edit.getWidth());
                     edit.setY(widgetY);
                     actionX = edit.getX();
+                }
+                if (tab != null) {
+                    tab.setX(actionX - 2 - tab.getWidth());
+                    tab.setY(widgetY);
+                    actionX = tab.getX();
                 }
 
                 if (SectionColorsScreen.this.classic) {
@@ -1778,6 +1833,10 @@ public class SectionColorsScreen extends Screen {
                     g.fill(lineX, lineTop, lineX + 2, top + rowHeight + gapToNext, mulAlpha(lineColor, alpha));
                 }
 
+                if (tab != null && !ColorList.this.renderingGhost) {
+                    tab.setAlpha(Math.max(alpha, 0.04f));
+                    tab.render(g, mouseX, mouseY, 0f);
+                }
                 if (edit != null && !ColorList.this.renderingGhost) {
                     edit.setAlpha(Math.max(alpha, 0.04f));
                     edit.render(g, mouseX, mouseY, 0f);
@@ -1880,13 +1939,10 @@ public class SectionColorsScreen extends Screen {
             }
 
             private List<AbstractWidget> widgets() {
-                if (edit == null && tab == null) {
-                    return List.of();
+                if (widgets == null) {
+                    widgets = RowChildren.of(tab, edit);
                 }
-                if (tab == null) {
-                    return List.of(edit);
-                }
-                return edit == null ? List.of(tab) : List.of(tab, edit);
+                return widgets;
             }
 
             @Override

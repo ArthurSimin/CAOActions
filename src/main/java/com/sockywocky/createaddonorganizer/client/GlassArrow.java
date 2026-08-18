@@ -1,20 +1,22 @@
 package com.sockywocky.createaddonorganizer.client;
 
+import com.mojang.math.Axis;
 import com.sockywocky.createaddonorganizer.Config;
 
 import net.minecraft.client.gui.GuiGraphics;
 
 final class GlassArrow {
 
-    static final int W = 16;
-    static final int H = 28;
-    static final int MARGIN = 5;
+    static final int W = 14;
+    static final int H = 26;
+    static final int MARGIN = 2;
+    private static final int PAD = 2;
 
-    private static final float SECONDS = 0.14f;
-    private static final int REST_INSET_X = 6;
-    private static final int REST_INSET_Y = 10;
-    private static final int ARM = 9;
-    private static final int THICK = 3;
+    private static final float SECONDS = 0.16f;
+    private static final float DRIFT = 4f;
+    private static final float REST_ALPHA = 0.35f;
+    private static final float ARM = 7f;
+    private static final float THICK = 2.2f;
 
     private float expand;
 
@@ -31,7 +33,7 @@ final class GlassArrow {
     }
 
     static boolean contains(double mouseX, double mouseY, int x, int y) {
-        return mouseX >= x && mouseX < x + W && mouseY >= y && mouseY < y + H;
+        return mouseX >= x - PAD && mouseX < x + W + PAD && mouseY >= y - PAD && mouseY < y + H + PAD;
     }
 
     void render(GuiGraphics g, int x, int y, boolean right, boolean hovered, float delta) {
@@ -44,28 +46,23 @@ final class GlassArrow {
         }
 
         float eased = expand * expand * (3f - 2f * expand);
-        if (eased > 0.02f) {
-            int insetX = Math.round((1f - eased) * REST_INSET_X);
-            int insetY = Math.round((1f - eased) * REST_INSET_Y);
-            GlassSkin.widgetBox(g, x + insetX, y + insetY, W - insetX * 2, H - insetY * 2, hovered, eased);
-        }
-        chevron(g, x + W / 2, y + H / 2, right,
-                hovered ? GlassSkin.titleTextColor() : GlassSkin.bodyTextColor());
+        float drift = eased * DRIFT;
+        float alpha = REST_ALPHA + (1f - REST_ALPHA) * eased;
+        int color = MenuSkin.mixColor(GlassSkin.bodyTextColor(), GlassSkin.titleTextColor(), eased);
+        chevron(g, x + W / 2f + (right ? -drift : drift), y + H / 2f, right,
+                MenuSkin.fade(color, alpha));
     }
 
-    static void chevron(GuiGraphics g, int centerX, int centerY, boolean right, int color) {
-        g.pose().pushPose();
-        g.pose().translate(centerX, centerY, 0f);
-        g.pose().scale(0.5f, 0.5f, 1f);
-
-        int dir = right ? 1 : -1;
-        int offset = dir * ARM / 2;
-        int half = THICK / 2;
-        for (int t = 0; t <= ARM; t++) {
-            int bx = offset - dir * t;
-            g.fill(bx - half, -t - half, bx - half + THICK, -t - half + THICK, color);
-            g.fill(bx - half, t - half, bx - half + THICK, t - half + THICK, color);
+    static void chevron(GuiGraphics g, float tipX, float centerY, boolean right, int color) {
+        float tip = tipX + (right ? ARM / 2f : -ARM / 2f);
+        for (int side = -1; side <= 1; side += 2) {
+            g.pose().pushPose();
+            g.pose().translate(tip, centerY, 0f);
+            g.pose().mulPose(Axis.ZP.rotationDegrees(right ? side * 135f : side * 45f));
+            g.pose().translate(-THICK * 0.4f, -THICK / 2f, 0f);
+            g.pose().scale(ARM + THICK * 0.4f, THICK, 1f);
+            g.fill(0, 0, 1, 1, color);
+            g.pose().popPose();
         }
-        g.pose().popPose();
     }
 }

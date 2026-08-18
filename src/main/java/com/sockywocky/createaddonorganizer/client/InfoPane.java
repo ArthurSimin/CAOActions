@@ -13,15 +13,13 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 
 final class InfoPane {
 
-    enum Kind { CREDITS, BUGS }
+    enum Kind { CREDITS, BUGS, INTEGRATIONS }
 
     private static final String DISCORD_URL = "https://discord.com/invite/WgYePqcRTk";
     private static final String ISSUES_URL = "https://github.com/SockyWocky7/createaddonorganizer/issues";
@@ -36,7 +34,14 @@ final class InfoPane {
     private static final int BANNER_W = BannerTextures.WIDTH * 6 / 5;
     private static final int BANNER_H = (BannerTextures.HEIGHT * 6 + 2) / 5;
 
-    private enum RowKind { HEADER, NOTE, LINK, BANNER }
+    private static final int MOD_PAD = 7;
+    private static final int MOD_ICON = 32;
+    private static final int MOD_GAP = 9;
+    private static final int MOD_LINK_H = 15;
+    private static final int MOD_LINK_GAP = 5;
+    private static final int PILL_PAD = 4;
+
+    private enum RowKind { HEADER, NOTE, LINK, BANNER, MOD }
 
     private final Screen owner;
     private final List<Row> rows = new ArrayList<>();
@@ -62,10 +67,10 @@ final class InfoPane {
 
     void build(Kind kind, Font font) {
         rows.clear();
-        if (kind == Kind.CREDITS) {
-            buildCredits();
-        } else {
-            buildBugReport();
+        switch (kind) {
+            case CREDITS -> buildCredits();
+            case INTEGRATIONS -> buildIntegrations();
+            default -> buildBugReport();
         }
         layout(font);
     }
@@ -132,6 +137,15 @@ final class InfoPane {
                 () -> openLink(ISSUES_URL)));
     }
 
+    private void buildIntegrations() {
+        rows.add(Row.header(Component.translatable("createaddonorganizer.integrations.title"), 0));
+        rows.add(Row.note(Component.translatable("createaddonorganizer.integrations.description"),
+                GlassSkin.bodyTextColor()));
+        for (IntegrationCatalog.Entry entry : IntegrationCatalog.entries()) {
+            rows.add(Row.mod(entry));
+        }
+    }
+
     private void openLink(String url) {
         Minecraft.getInstance().setScreen(new ConfirmLinkScreen(confirmed -> {
             if (confirmed) {
@@ -153,6 +167,12 @@ final class InfoPane {
                 case NOTE -> {
                     row.description = font.split(row.header, rowWidth - PAD_X * 2);
                     row.height = row.description.size() * LINE_H + NOTE_GAP;
+                }
+                case MOD -> {
+                    row.description = font.split(row.mod.description(),
+                            Math.max(20, rowWidth - MOD_PAD * 2 - MOD_ICON - MOD_GAP));
+                    int textH = 12 + row.description.size() * LINE_H;
+                    row.height = MOD_PAD * 2 + Math.max(MOD_ICON, textH) + MOD_LINK_GAP + MOD_LINK_H;
                 }
             }
             y += row.height + (row.kind == RowKind.HEADER ? 0 : ROW_GAP);
@@ -184,6 +204,8 @@ final class InfoPane {
                 case NOTE -> renderNote(g, font, row, rowX, y);
                 case LINK -> renderLink(g, font, row, rowX, y, rowWidth, hovered);
                 case BANNER -> renderBanner(g, row, rowX, y, rowWidth, mouseX, mouseY);
+                case MOD -> renderMod(g, font, row, rowX, y, rowWidth, mouseX, mouseY, overPane,
+                        hovered);
             }
         }
         g.disableScissor();
@@ -230,6 +252,72 @@ final class InfoPane {
         }
     }
 
+    private static int[] modLink(int rowX, int rowWidth, int y, int height, boolean second) {
+        int left = rowX + MOD_PAD;
+        int usable = rowWidth - MOD_PAD * 2;
+        int each = (usable - MOD_LINK_GAP) / 2;
+        return new int[] {second ? left + usable - each : left, y + height - MOD_PAD - MOD_LINK_H, each,
+                MOD_LINK_H};
+    }
+
+    private static boolean inRect(double mouseX, double mouseY, int[] rect) {
+        return mouseX >= rect[0] && mouseX < rect[0] + rect[2]
+                && mouseY >= rect[1] && mouseY < rect[1] + rect[3];
+    }
+
+    private void renderMod(GuiGraphics g, Font font, Row row, int rowX, int y, int rowWidth, int mouseX,
+            int mouseY, boolean overPane, boolean hovered) {
+        IntegrationCatalog.Entry entry = row.mod;
+        boolean installed = entry.installed();
+
+        g.fill(rowX, y, rowX + rowWidth, y + row.height, GlassSkin.cardColor(hovered));
+        GlassSkin.outline(g, rowX, y, rowWidth, row.height, GlassSkin.cardBorder(hovered));
+        ModIcons.render(g, entry.modId(), entry.name(), rowX + MOD_PAD, y + MOD_PAD, MOD_ICON, installed);
+
+        int textX = rowX + MOD_PAD + MOD_ICON + MOD_GAP;
+        int titleColor = installed ? GlassSkin.titleTextColor() : GlassSkin.mutedTextColor();
+        g.drawString(font, entry.name(), textX, y + MOD_PAD, titleColor, GlassSkin.shadow());
+
+        Component pill = Component.translatable(installed
+                ? "createaddonorganizer.integrations.installed"
+                : entry.required()
+                        ? "createaddonorganizer.integrations.missing"
+                        : "createaddonorganizer.integrations.notInstalled");
+        int pillW = font.width(pill) + PILL_PAD * 2;
+        int pillX = rowX + rowWidth - MOD_PAD - pillW;
+        int pillColor = installed
+                ? MenuSkin.accent(0xFF55D07A)
+                : entry.required() ? GlassSkin.DANGER_LIT : GlassSkin.mutedTextColor();
+        g.fill(pillX, y + MOD_PAD - 1, pillX + pillW, y + MOD_PAD + 10, MenuSkin.fade(pillColor, 0.16f));
+        g.drawString(font, pill, pillX + PILL_PAD, y + MOD_PAD, pillColor, GlassSkin.shadow());
+
+        int lineY = y + MOD_PAD + 12;
+        int bodyColor = installed ? GlassSkin.bodyTextColor() : GlassSkin.mutedTextColor();
+        for (FormattedCharSequence line : row.description) {
+            g.drawString(font, line, textX, lineY, bodyColor, GlassSkin.shadow());
+            lineY += LINE_H;
+        }
+
+        renderModLink(g, font, rowX, rowWidth, y, row.height, false,
+                Component.translatable("createaddonorganizer.integrations.modrinth"), mouseX, mouseY,
+                overPane);
+        renderModLink(g, font, rowX, rowWidth, y, row.height, true,
+                Component.translatable("createaddonorganizer.integrations.curseforge"), mouseX, mouseY,
+                overPane);
+    }
+
+    private void renderModLink(GuiGraphics g, Font font, int rowX, int rowWidth, int y, int height,
+            boolean second, Component label, int mouseX, int mouseY, boolean overPane) {
+        int[] rect = modLink(rowX, rowWidth, y, height, second);
+        boolean hovered = overPane && inRect(mouseX, mouseY, rect) && mouseY >= top && mouseY < bottom;
+        GlassSkin.widgetBox(g, rect[0], rect[1], rect[2], rect[3], hovered);
+        int color = hovered ? GlassSkin.titleTextColor() : GlassSkin.accent();
+        int textW = font.width(label);
+        int textX = rect[0] + (rect[2] - textW - 9) / 2;
+        g.drawString(font, label, textX, rect[1] + 4, color, GlassSkin.shadow());
+        linkArrow(g, textX + textW + 3, rect[1] + 4, color);
+    }
+
     private void renderBanner(GuiGraphics g, Row row, int rowX, int y, int rowWidth, int mouseX, int mouseY) {
         CreditsCatalog.Entry entry = row.credit;
         int bx = rowX + (rowWidth - BANNER_W) / 2;
@@ -264,12 +352,28 @@ final class InfoPane {
             if (mouseY < y || mouseY >= y + row.height) {
                 continue;
             }
+            if (row.kind == RowKind.MOD) {
+                return clickMod(row, rowX, rowWidth, y, mouseX, mouseY);
+            }
             if (row.kind != RowKind.LINK || mouseX < rowX || mouseX >= rowX + rowWidth) {
                 return false;
             }
-            Minecraft.getInstance().getSoundManager()
-                    .play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            Sfx.uiClick();
             row.action.run();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean clickMod(Row row, int rowX, int rowWidth, int y, double mouseX, double mouseY) {
+        if (inRect(mouseX, mouseY, modLink(rowX, rowWidth, y, row.height, false))) {
+            Sfx.uiClick();
+            openLink(row.mod.modrinth());
+            return true;
+        }
+        if (inRect(mouseX, mouseY, modLink(rowX, rowWidth, y, row.height, true))) {
+            Sfx.uiClick();
+            openLink(row.mod.curseforge());
             return true;
         }
         return false;
@@ -308,6 +412,7 @@ final class InfoPane {
         final CreditsCatalog.Entry credit;
         final Runnable action;
         final boolean arrow;
+        IntegrationCatalog.Entry mod;
         int color;
         List<FormattedCharSequence> description = List.of();
         int y;
@@ -319,6 +424,12 @@ final class InfoPane {
             this.credit = credit;
             this.action = action;
             this.arrow = arrow;
+        }
+
+        static Row mod(IntegrationCatalog.Entry entry) {
+            Row row = new Row(RowKind.MOD, null, null, null, false);
+            row.mod = entry;
+            return row;
         }
 
         static Row header(Component title, int color) {

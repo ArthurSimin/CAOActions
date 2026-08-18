@@ -38,7 +38,7 @@ base {
 }
 
 tasks.named('jar', Jar).configure {
-    archiveVersion = "${mod_version}__${minecraft_version}"
+    archiveVersion = "${mod_version}___${minecraft_version}"
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)

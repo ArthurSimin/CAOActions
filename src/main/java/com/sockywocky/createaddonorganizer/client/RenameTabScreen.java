@@ -62,10 +62,11 @@ public class RenameTabScreen extends Screen {
     private void commit() {
         String value = nameBox.getValue().trim();
         TabLayout layout = TabLayoutStore.byId(tabId);
-        if (layout != null) {
-            TabLayoutStore.put(layout.withName(value.isBlank() || value.equals(realName()) ? null : value));
-            createaddonorganizer.refreshTabLayout(ClientRegistries.displayParams(), tabId);
+        if (layout == null) {
+            layout = TabLayout.empty(tabId, null, null);
         }
+        TabLayoutStore.put(layout.withName(value.isBlank() || value.equals(realName()) ? null : value));
+        createaddonorganizer.refreshTabLayout(ClientRegistries.displayParams(), tabId);
         onClose();
     }
 

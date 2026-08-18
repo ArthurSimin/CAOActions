@@ -42,7 +42,7 @@ public final class FpsMonitor {
     private FpsMonitor() {}
 
     public static void render(GuiGraphics g, Minecraft mc) {
-        if (!DevMode.isUnlocked()) {
+        if (!DevMode.isUnlocked() || !Config.devFpsDisplay()) {
             RenderProfiler.setActive(false);
             lastNanos = 0L;
             filled = 0;

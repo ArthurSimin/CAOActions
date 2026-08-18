@@ -7,15 +7,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceLocation;
 
 public final class ItemGroupRuntime {
-    public record Fold(String groupId, String title, int index, int memberCount, boolean open) {
+    public record Fold(String groupId, String title, int index, int memberCount, boolean headIsMember,
+            boolean open) {
         public int slotSpan() {
-            return open ? memberCount + 1 : 1;
+            if (!open) {
+                return 1;
+            }
+            return headIsMember ? Math.max(1, memberCount) : memberCount + 1;
         }
     }
 
     private static final Map<ResourceLocation, List<Fold>> BY_SECTION = new ConcurrentHashMap<>();
 
     private ItemGroupRuntime() {}
+
+    public static ResourceLocation flatKey(ResourceLocation tabId) {
+        if (tabId == null) {
+            return null;
+        }
+        return ResourceLocation.fromNamespaceAndPath(createaddonorganizer.MODID,
+                "tab/" + tabId.getNamespace() + "/" + tabId.getPath());
+    }
 
     public static String key(ResourceLocation sectionId, String groupId) {
         return sectionId == null || groupId == null ? null : sectionId + "#" + groupId;

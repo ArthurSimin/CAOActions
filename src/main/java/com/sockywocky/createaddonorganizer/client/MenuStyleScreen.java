@@ -6,7 +6,6 @@ import java.util.Locale;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -20,7 +19,7 @@ public class MenuStyleScreen extends Screen implements EmbeddedPane {
 
     private final Screen returnTo;
     private final List<Button> styleButtons = new ArrayList<>();
-    private CycleButton<Boolean> transparencyButton;
+    private GlassToggle transparencyButton;
     private Button accentArrow;
     private int firstRowY;
     private int accentRowY;
@@ -91,10 +90,12 @@ public class MenuStyleScreen extends Screen implements EmbeddedPane {
                 .bounds(x, accentRowY, BUTTON_H, BUTTON_H)
                 .build());
 
-        transparencyButton = addRenderableWidget(CycleButton.onOffBuilder(Config.menuStyleTransparent())
-                .create(toggleX, accentRowY, toggleW, BUTTON_H,
-                        Component.translatable("createaddonorganizer.style.transparency"),
-                        (button, value) -> Config.setMenuStyleTransparent(value)));
+        transparencyButton = addRenderableWidget(new GlassToggle(toggleX,
+                accentRowY + (BUTTON_H - GlassToggle.HEIGHT) / 2,
+                Component.translatable("createaddonorganizer.style.transparency"),
+                Config.menuStyleTransparent(), Config::setMenuStyleTransparent)
+                .key("cao:menuStyleTransparent"));
+        transparencyButton.setWidth(toggleW);
         transparencyButton.active = Config.menuStyle() != Config.MenuStyle.DEFAULT;
 
         if (accentArrow != null && accentExpanded) {

@@ -25,7 +25,10 @@
     "MenuSkinScreenMixin",
     "MenuSkinListMixin",
     "ScreenSwooshMixin",
-    "GuiGraphicsFadeMixin"
+    "GuiGraphicsFadeMixin",
+    "GuiGraphicsTextProbeMixin",
+    "FontSplitProbeMixin",
+    "TooltipMessageAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

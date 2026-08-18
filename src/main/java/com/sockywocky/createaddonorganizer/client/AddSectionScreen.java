@@ -151,11 +151,16 @@ public class AddSectionScreen extends Screen implements EmbeddedPane {
         searchY = rowTop + BUTTON_H + MenuLayout.GAP;
         searchX = panelX;
         searchW = panelW - FILTER_W - MenuLayout.GAP;
-        addRenderableWidget(new GlassButton(panelX + panelW - FILTER_W, searchY, FILTER_W, BUTTON_H,
-                placedLabel(), b -> {
-                    showPlaced = !showPlaced;
-                    rebuildWidgets();
-                }));
+        GlassToggle placedToggle = new GlassToggle(panelX + panelW - FILTER_W,
+                searchY + (BUTTON_H - GlassToggle.HEIGHT) / 2,
+                Component.translatable("createaddonorganizer.addsection.showPlaced"), showPlaced,
+                checked -> {
+                    showPlaced = checked;
+                    refreshList(list == null ? 0 : list.getScrollAmount());
+                });
+        placedToggle.key("cao:addSectionShowPlaced");
+        placedToggle.setWidth(FILTER_W);
+        addRenderableWidget(placedToggle);
 
         searchBox = new EditBox(this.font, searchX + 18, searchY, searchW - 24, BUTTON_H,
                 Component.translatable("createaddonorganizer.addsection.search"));
@@ -196,11 +201,6 @@ public class AddSectionScreen extends Screen implements EmbeddedPane {
     private Component modeLabel() {
         String key = mode == Mode.SUB ? "createaddonorganizer.addsection.mode.sub" : "createaddonorganizer.addsection.mode.main";
         return Component.translatable("createaddonorganizer.addsection.mode").append(": ").append(Component.translatable(key));
-    }
-
-    private Component placedLabel() {
-        return Component.translatable("createaddonorganizer.addsection.showPlaced").append(": ")
-                .append(Component.translatable(showPlaced ? "options.on" : "options.off"));
     }
 
     private Component hubLabel() {
@@ -431,12 +431,12 @@ public class AddSectionScreen extends Screen implements EmbeddedPane {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override

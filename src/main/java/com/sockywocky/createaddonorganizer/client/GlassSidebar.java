@@ -8,14 +8,12 @@ import java.util.function.Supplier;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.neoforged.fml.ModContainer;
 
@@ -25,6 +23,8 @@ final class GlassSidebar {
     static final int ROW_H = 14;
     static final int SEP_H = 9;
     static final int HEADER_H = 26;
+    private static final int TITLE_LINE_H = 10;
+    private static final int MAX_TITLE_LINES = 2;
     static final int MIN_W = 128;
     static final int MAX_W = 196;
 
@@ -125,6 +125,9 @@ final class GlassSidebar {
     private Runnable onFolder;
     private Component folderTooltip;
     private Component title = Component.empty();
+    private boolean shine;
+    private List<FormattedCharSequence> titleLines = List.of();
+    private int headerH = HEADER_H;
 
     private int x;
     private int y;
@@ -155,7 +158,25 @@ final class GlassSidebar {
 
     GlassSidebar title(Component value) {
         this.title = value;
+        this.titleLines = List.of();
         return this;
+    }
+
+    GlassSidebar shine(boolean value) {
+        this.shine = value;
+        return this;
+    }
+
+    private void measureTitle(Font font) {
+        int room = innerWidth() - (onFolder != null ? ICON + 4 : 0);
+        if (room <= 0) {
+            titleLines = List.of();
+            headerH = HEADER_H;
+            return;
+        }
+        List<FormattedCharSequence> wrapped = font.split(title, room);
+        titleLines = wrapped.size() > MAX_TITLE_LINES ? wrapped.subList(0, MAX_TITLE_LINES) : wrapped;
+        headerH = HEADER_H + Math.max(0, titleLines.size() - 1) * TITLE_LINE_H;
     }
 
     GlassSidebar onUpdate(Runnable value) {
@@ -178,6 +199,9 @@ final class GlassSidebar {
     }
 
     void setBounds(int x, int y, int width, int height) {
+        if (this.width != width) {
+            this.titleLines = List.of();
+        }
         this.x = x;
         this.y = y;
         this.width = width;
@@ -191,7 +215,7 @@ final class GlassSidebar {
         versionTop = (UpdateCheck.available() ? updateY : doneY) - VERSION_H;
         listBottom = versionTop - 5;
 
-        jumpTop = y + HEADER_H + 5;
+        jumpTop = y + headerH + 5;
         int room = Math.max(ROW_H * 2, listBottom - jumpTop - MIN_ROWS_AREA);
         int jumpH = jumpRows.isEmpty() ? 0 : Math.min(MAX_JUMP_H, room);
         jumpBottom = jumpTop + jumpH;
@@ -237,7 +261,20 @@ final class GlassSidebar {
         GlassSkin.panel(g, x, y, width, height);
 
         int textLeft = innerX();
-        g.drawString(font, title, textLeft, y + 9, GlassSkin.titleTextColor(), GlassSkin.shadow());
+        if (titleLines.isEmpty()) {
+            measureTitle(font);
+            layout();
+        }
+        if (shine) {
+            TitleShine.draw(g, font, titleLines, textLeft, y + 9, TITLE_LINE_H,
+                    GlassSkin.titleTextColor(), GlassSkin.shadow());
+        } else {
+            int titleY = y + 9;
+            for (FormattedCharSequence line : titleLines) {
+                g.drawString(font, line, textLeft, titleY, GlassSkin.titleTextColor(), GlassSkin.shadow());
+                titleY += TITLE_LINE_H;
+            }
+        }
 
         if (onFolder != null) {
             int folderX = x + width - PAD - ICON;
@@ -251,7 +288,7 @@ final class GlassSidebar {
             }
         }
 
-        int ruleY = y + HEADER_H;
+        int ruleY = y + headerH;
         g.fill(x + 1, ruleY, x + width - 1, ruleY + 1, GlassSkin.borderColor());
 
         if (jumpBottom > jumpTop) {
@@ -477,8 +514,7 @@ final class GlassSidebar {
     }
 
     private static void click() {
-        Minecraft.getInstance().getSoundManager()
-                .play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        Sfx.uiClick();
     }
 
     private static void drawGlyph(GuiGraphics g, Glyph glyph, int x, int y) {

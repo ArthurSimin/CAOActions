@@ -27,17 +27,14 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.CreativeModeTab;
 
 import com.sockywocky.createaddonorganizer.Config;
+import com.sockywocky.createaddonorganizer.ItemObliteratorSupport;
 import com.sockywocky.createaddonorganizer.TabLayout;
 import com.sockywocky.createaddonorganizer.TabLayoutStore;
 
 public class TabStudioScreen extends Screen {
 
     private static final long PRIME_BUDGET_NANOS = 10_000_000L;
-    private static final int ARROW_W = 16;
-    private static final int ARROW_MARGIN = 8;
-    private static final int ARROW_H = 28;
 
-    private static final long FIRST_OPEN_HOLD_MS = 1000;
     private static final long FADE_MS = 300;
     private static final long TITLE_SLIDE_MS = 500;
     private static final long SUB_DELAY_MS = 260;
@@ -86,6 +83,9 @@ public class TabStudioScreen extends Screen {
     private long openedMillis = System.currentTimeMillis();
     private final List<AbstractWidget> fadingWidgets = new ArrayList<>();
     private final boolean playIntro;
+    private final GlassArrow backArrow = new GlassArrow();
+    private long frameNanos;
+    private Component hoverTip;
 
     public TabStudioScreen(Screen returnTo) {
         super(Component.translatable("createaddonorganizer.tabs.title"));
@@ -130,23 +130,41 @@ public class TabStudioScreen extends Screen {
         list.setScrollAmount(listScroll);
 
         int fy = this.height - 48;
-        int half = listW / 2 - 2;
+        boolean disabler = ItemObliteratorSupport.isLoaded();
+        int slots = disabler ? 3 : 2;
+        int gap = 4;
+        int each = (listW - gap * (slots - 1)) / slots;
+
         newTabButton = addRenderableWidget(Button.builder(
                         Component.translatable("createaddonorganizer.tabs.newTab"), b -> createTab())
-                .bounds(listX, fy, half, 20).build());
+                .bounds(listX, fy, each, 20).build());
         fadingWidgets.add(newTabButton);
         fadingWidgets.add(addRenderableWidget(Button.builder(
                         Component.translatable("createaddonorganizer.tabs.arranger"),
                         b -> ScreenSwoosh.drill(() -> new TabArrangerScreen(this), Config.SWOOSH_TAB_STUDIO))
-                .bounds(listX + listW - half, fy, half, 20).build()));
+                .bounds(disabler ? listX + each + gap : listX + listW - each, fy, each, 20).build()));
+        if (disabler) {
+            fadingWidgets.add(addRenderableWidget(Button.builder(
+                            Component.translatable("createaddonorganizer.tabs.itemDisabler"),
+                            b -> ScreenSwoosh.drill(() -> new ItemDisablerScreen(this), Config.SWOOSH_TAB_STUDIO))
+                    .bounds(listX + listW - each, fy, each, 20)
+                    .tooltip(Tooltip.create(
+                            Component.translatable("createaddonorganizer.tabs.itemDisabler.tooltip")))
+                    .build()));
+        }
 
         fadingWidgets.add(addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
                 .bounds(listX, fy + 24, listW, 20).build()));
+    }
 
-        fadingWidgets.add(addRenderableWidget(Button.builder(Component.literal("<"), b -> onClose())
-                .bounds(ARROW_MARGIN, this.height / 2 - ARROW_H / 2, ARROW_W, ARROW_H)
-                .tooltip(Tooltip.create(Component.translatable("createaddonorganizer.colors.title")))
-                .build()));
+    private void renderBackArrow(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        int x = GlassArrow.leftX();
+        int y = GlassArrow.top(this.height);
+        boolean hovered = GlassArrow.contains(mouseX, mouseY, x, y);
+        backArrow.render(g, x, y, false, hovered, delta);
+        if (hovered) {
+            hoverTip = Component.translatable("createaddonorganizer.colors.title");
+        }
     }
 
     private boolean animationDone() {
@@ -287,7 +305,16 @@ public class TabStudioScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return !priming && super.mouseClicked(mouseX, mouseY, button);
+        if (priming) {
+            return false;
+        }
+        if (button == 0
+                && GlassArrow.contains(mouseX, mouseY, GlassArrow.leftX(), GlassArrow.top(this.height))) {
+            Sfx.uiClick();
+            onClose();
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
@@ -307,13 +334,19 @@ public class TabStudioScreen extends Screen {
                     MenuSkin.bodyColor(0xFF8A9AA8));
             if (!primeWorkDone) {
                 advancePriming();
-            } else if (elapsed >= LoadingSpinner.cycleMs() + (playIntro ? FIRST_OPEN_HOLD_MS : 0)) {
+            }
+            if (primeWorkDone) {
                 priming = false;
                 contentsPrimed = true;
                 openedMillis = System.currentTimeMillis();
             }
             return;
         }
+
+        hoverTip = null;
+        long now = System.nanoTime();
+        float delta = frameNanos == 0 ? 0f : Math.min(0.25f, (now - frameNanos) / 1_000_000_000f);
+        frameNanos = now;
 
         int free = TabLayoutStore.freeSlotCount();
         newTabButton.active = free > 0;
@@ -347,18 +380,23 @@ public class TabStudioScreen extends Screen {
             g.drawCenteredString(this.font, Component.translatable("createaddonorganizer.tabs.empty"),
                     this.width / 2, this.height / 2 - 4, mulAlpha(0xFFAAAAAA, subAlpha / 255f));
         }
+
+        renderBackArrow(g, mouseX, mouseY, delta);
+        if (hoverTip != null) {
+            g.renderTooltip(this.font, this.font.split(hoverTip, 200), mouseX, mouseY);
+        }
     }
 
     private abstract class Line extends ContainerObjectSelectionList.Entry<Line> {
 
         @Override
         public List<? extends GuiEventListener> children() {
-            return List.of();
+            return RowChildren.none();
         }
 
         @Override
         public List<? extends NarratableEntry> narratables() {
-            return List.of();
+            return RowChildren.none();
         }
     }
 
@@ -409,6 +447,7 @@ public class TabStudioScreen extends Screen {
             if (button != 0) {
                 return false;
             }
+            Sfx.uiClick();
             ScreenSwoosh.drill(() -> new TabEditorScreen(TabStudioScreen.this, id), Config.SWOOSH_TAB_STUDIO);
             return true;
         }

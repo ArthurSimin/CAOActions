@@ -248,19 +248,21 @@ public record TabLayout(String tab, String name, String icon, int nextSectionId,
         return members.isEmpty() ? null : members.get(0);
     }
 
-    public TabLayout withItemsGrouped(List<String> members, String title) {
-        Set<String> wanted = new LinkedHashSet<>(members);
-        wanted.remove(null);
-        if (wanted.size() < 2) {
+    public TabLayout withEntriesGrouped(List<Entry> members, String title) {
+        return withEntriesGrouped(members, title, null);
+    }
+
+    public TabLayout withEntriesGrouped(List<Entry> members, String title, String iconItem) {
+        if (members == null || members.size() < 2) {
             return this;
         }
         String groupId = "g" + nextGroupId;
         List<Entry> src = safeEntries();
-        List<Entry> moved = new ArrayList<>(wanted.size());
+        List<Entry> moved = new ArrayList<>(members.size());
         List<Entry> out = new ArrayList<>(src.size());
         int insertAt = -1;
         for (Entry entry : src) {
-            if (entry.isItem() && wanted.contains(entry.item())) {
+            if (entry.isItem() && containsSame(members, entry)) {
                 if (insertAt < 0) {
                     insertAt = out.size();
                 }
@@ -274,7 +276,8 @@ public record TabLayout(String tab, String name, String icon, int nextSectionId,
         }
         out.addAll(insertAt, moved);
         List<ItemGroup> groups = new ArrayList<>(safeItemGroups());
-        groups.add(new ItemGroup(groupId, title, moved.get(0).item()));
+        groups.add(new ItemGroup(groupId, title,
+                iconItem == null || iconItem.isBlank() ? moved.get(0).item() : iconItem));
         return new TabLayout(tab, name, icon, nextSectionId, List.copyOf(out), safeRemoved(), seeded,
                 List.copyOf(groups), nextGroupId + 1);
     }
@@ -480,13 +483,23 @@ public record TabLayout(String tab, String name, String icon, int nextSectionId,
         return n;
     }
 
-    public boolean containsItem(String itemId) {
+    public Map<String, Integer> itemCounts() {
+        Map<String, Integer> counts = new HashMap<>();
         for (Entry entry : safeEntries()) {
-            if (entry.isItem() && entry.item().equals(itemId)) {
-                return true;
+            if (entry.isItem()) {
+                counts.merge(entry.item(), 1, Integer::sum);
             }
         }
-        return false;
+        return counts;
+    }
+
+    public static int indexOfSame(List<Entry> entries, Entry target) {
+        for (int i = 0; i < entries.size(); i++) {
+            if (entries.get(i) == target) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public boolean isEmptyOverride() {
@@ -613,41 +626,60 @@ public record TabLayout(String tab, String name, String icon, int nextSectionId,
         return rebuilt(name, icon, nextSectionId + 1, List.copyOf(updated), safeRemoved(), seeded);
     }
 
-    public TabLayout withItemAdded(String itemId) {
-        return withItemInserted(itemId, -1);
-    }
-
-    public TabLayout withItemInserted(String itemId, int index) {
-        if (itemId == null || itemId.isBlank() || containsItem(itemId)) {
+    public TabLayout withEntryInserted(Entry entry, int index) {
+        if (entry == null || !entry.isItem()) {
             return this;
         }
         List<Entry> updated = new ArrayList<>(safeEntries());
         if (index < 0 || index > updated.size()) {
-            updated.add(Entry.item(itemId));
+            updated.add(entry);
         } else {
-            updated.add(index, Entry.item(itemId));
+            updated.add(index, entry);
         }
         List<String> stillRemoved = new ArrayList<>(safeRemoved());
-        stillRemoved.remove(itemId);
+        stillRemoved.remove(entry.item());
         return withEntriesAndRemoved(updated, stillRemoved);
     }
 
-    public TabLayout withItemRemoved(String itemId) {
-        List<Entry> updated = new ArrayList<>();
+    public TabLayout withEntriesRemoved(List<Entry> doomed) {
+        if (doomed == null || doomed.isEmpty()) {
+            return this;
+        }
+        List<Entry> updated = new ArrayList<>(safeEntries().size());
+        List<String> lostItems = new ArrayList<>();
         for (Entry entry : safeEntries()) {
-            if (entry.isItem() && entry.item().equals(itemId)) {
+            if (containsSame(doomed, entry)) {
+                if (entry.isItem()) {
+                    lostItems.add(entry.item());
+                }
                 continue;
             }
             updated.add(entry);
         }
-        if (isCustom()) {
+        if (isCustom() || lostItems.isEmpty()) {
             return withEntries(updated);
         }
         List<String> nowRemoved = new ArrayList<>(safeRemoved());
-        if (!nowRemoved.contains(itemId)) {
+        for (String itemId : lostItems) {
+            if (nowRemoved.contains(itemId) || stillHolds(updated, itemId)) {
+                continue;
+            }
             nowRemoved.add(itemId);
         }
         return withEntriesAndRemoved(updated, nowRemoved);
+    }
+
+    private static boolean stillHolds(List<Entry> entries, String itemId) {
+        for (Entry entry : entries) {
+            if (entry.isItem() && entry.item().equals(itemId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsSame(List<Entry> entries, Entry target) {
+        return indexOfSame(entries, target) >= 0;
     }
 
     public TabLayout reconciledWith(List<String> producedIds) {

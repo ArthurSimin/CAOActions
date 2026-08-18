@@ -13,6 +13,7 @@ import javax.crypto.spec.PBEKeySpec;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.fml.ModContainer;
@@ -23,6 +24,8 @@ import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.platform.InputConstants;
 
 public final class DevMode {
+    private static final String OWN_PACKAGE = "com.sockywocky.createaddonorganizer.";
+
     private static final long GESTURE_WINDOW_MS = 2000L;
     private static final int GESTURE_PRESSES = 3;
 
@@ -56,7 +59,12 @@ public final class DevMode {
     }
 
     public static void tick(Minecraft mc) {
-        if (!(mc.screen instanceof Screen screen) || !isOurScreen(screen)) {
+        if (!(mc.screen instanceof Screen screen) || !acceptsGesture(screen)) {
+            shiftPressCount = 0;
+            shiftWasDown = false;
+            return;
+        }
+        if (screen.getFocused() instanceof EditBox) {
             shiftPressCount = 0;
             shiftWasDown = false;
             return;
@@ -87,6 +95,11 @@ public final class DevMode {
                 mc.setScreen(new DevCodeScreen(current));
             }
         }
+    }
+
+    static boolean acceptsGesture(Screen screen) {
+        return screen != null
+                && (screen.getClass().getName().startsWith(OWN_PACKAGE) || isOurScreen(screen));
     }
 
     public static boolean isAuthorizedUser() {

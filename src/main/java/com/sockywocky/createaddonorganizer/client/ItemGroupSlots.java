@@ -5,9 +5,8 @@ import java.util.List;
 import net.mcexpanded.fancytabsections.FTSInternal;
 import net.mcexpanded.fancytabsections.FancyTabSections;
 import net.mcexpanded.fancytabsections.Section.Section;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -18,6 +17,8 @@ import net.minecraft.world.item.CreativeModeTab;
 
 import com.sockywocky.createaddonorganizer.Config;
 import com.sockywocky.createaddonorganizer.ItemGroupRuntime;
+import com.sockywocky.createaddonorganizer.TabLayout;
+import com.sockywocky.createaddonorganizer.TabLayoutStore;
 import com.sockywocky.createaddonorganizer.createaddonorganizer;
 import com.sockywocky.createaddonorganizer.mixin.CreativeModeInventoryScreenAccessor;
 
@@ -25,14 +26,15 @@ public final class ItemGroupSlots {
     private static final int COLS = 9;
     private static final int VISIBLE_ROWS = 5;
     private static final int SLOT_SIZE = 18;
+    private static final int SLOT_INNER = 16;
 
-    private static final int MARK_BG = 0xC0101418;
-    private static final int MARK_OPEN = GlassSkin.DEFAULT_ACCENT_LIT;
-    private static final int MARK_CLOSED = 0xFFD8D8D8;
+    private static final int BACKDROP = 0x7F111111;
+    private static final int GLYPH_EDGE = 0xFF000000;
 
     private ItemGroupSlots() {}
 
-    private record Hit(ResourceLocation sectionId, ItemGroupRuntime.Fold fold) {}
+    private record Hit(ResourceLocation sectionId, ResourceLocation source, ItemGroupRuntime.Fold fold,
+            boolean head) {}
 
     private static CreativeModeTab cachedTab;
     private static ResourceLocation cachedTabId;
@@ -56,6 +58,9 @@ public final class ItemGroupSlots {
         }
         boolean opened = ItemGroupRuntime.toggle(hit.sectionId(), hit.fold().groupId());
         Sfx.groupToggle(opened);
+        if (hit.source() != null && !hit.source().equals(tabId)) {
+            createaddonorganizer.rebuildTab(ClientRegistries.displayParams(), hit.source());
+        }
         createaddonorganizer.refreshTabRows(ClientRegistries.displayParams(), tabId);
         return true;
     }
@@ -78,30 +83,102 @@ public final class ItemGroupSlots {
                 hit.fold().title(), hit.fold().memberCount());
     }
 
-    public static void render(CreativeModeInventoryScreen screen, GuiGraphics g) {
+    private static Hit[] visibleSpans(CreativeModeInventoryScreen screen) {
         if (!enabled() || !Config.showItemGroupMarkers()) {
+            return null;
+        }
+        Hit[] spans = new Hit[COLS * VISIBLE_ROWS];
+        boolean any = false;
+        for (int index = 0; index < spans.length; index++) {
+            spans[index] = spanAt(screen, index);
+            any |= spans[index] != null;
+        }
+        return any ? spans : null;
+    }
+
+    public static void renderRuns(CreativeModeInventoryScreen screen, GuiGraphics g) {
+        Hit[] spans = visibleSpans(screen);
+        if (spans == null) {
             return;
         }
-        Font font = Minecraft.getInstance().font;
         int left = screen.getGuiLeft() + 9;
         int top = screen.getGuiTop() + 18;
-        for (int index = 0; index < COLS * VISIBLE_ROWS; index++) {
-            Hit hit = hitFor(screen, index);
+        for (int index = 0; index < spans.length; index++) {
+            Hit hit = spans[index];
             if (hit == null) {
                 continue;
             }
-            int x = left + (index % COLS) * SLOT_SIZE;
-            int y = top + (index / COLS) * SLOT_SIZE;
-            drawMarker(g, font, x, y, hit.fold().open());
+            int col = index % COLS;
+            int row = index / COLS;
+            int x = left + col * SLOT_SIZE;
+            int y = top + row * SLOT_SIZE;
+            g.fill(x, y, x + SLOT_INNER, y + SLOT_INNER, BACKDROP);
+            drawRunEdges(g, spans, index, col, row, x, y, edgeColorFor(hit));
         }
     }
 
-    private static void drawMarker(GuiGraphics g, Font font, int x, int y, boolean open) {
-        int mx = x + 10;
-        int my = y + 10;
-        g.fill(mx, my, mx + 7, my + 7, MARK_BG);
-        int color = open ? MenuSkin.accent(MARK_OPEN) : MARK_CLOSED;
-        g.drawString(font, open ? "-" : "+", mx + 2, my - 1, color, false);
+    public static void renderBadge(CreativeModeInventoryScreen screen, GuiGraphics g, Slot slot) {
+        if (!enabled() || !Config.showItemGroupMarkers() || !isGridSlot(slot)) {
+            return;
+        }
+        Hit hit = hitFor(screen, slot.index);
+        if (hit == null) {
+            return;
+        }
+        drawMarker(g, slot.x, slot.y, hit.fold().open(), glyphColorFor(hit));
+    }
+
+    private static boolean sameRun(Hit a, Hit b) {
+        return a != null && b != null && a.sectionId().equals(b.sectionId())
+                && a.fold().groupId().equals(b.fold().groupId());
+    }
+
+    private static void drawRunEdges(GuiGraphics g, Hit[] spans, int index, int col, int row, int x, int y,
+            int color) {
+        Hit self = spans[index];
+        boolean west = col > 0 && sameRun(spans[index - 1], self);
+        boolean east = col < COLS - 1 && sameRun(spans[index + 1], self);
+        boolean north = row > 0 && sameRun(spans[index - COLS], self);
+        boolean south = row < VISIBLE_ROWS - 1 && sameRun(spans[index + COLS], self);
+        if (!north) {
+            g.fill(x - 1, y - 1, x + SLOT_INNER + 1, y, color);
+        }
+        if (!south) {
+            g.fill(x - 1, y + SLOT_INNER, x + SLOT_INNER + 1, y + SLOT_INNER + 1, color);
+        }
+        if (!west) {
+            g.fill(x - 1, y - 1, x, y + SLOT_INNER + 1, color);
+        }
+        if (!east) {
+            g.fill(x + SLOT_INNER, y - 1, x + SLOT_INNER + 1, y + SLOT_INNER + 1, color);
+        }
+    }
+
+    private static TabLayout layoutFor(Hit hit) {
+        ResourceLocation owner = hit.source() != null
+                ? hit.source()
+                : TabLayout.ownerOfSectionId(hit.sectionId());
+        return owner == null ? null : TabLayoutStore.byId(owner);
+    }
+
+    private static int edgeColorFor(Hit hit) {
+        return ItemGroupColors.slotEdge(layoutFor(hit), hit.fold().groupId());
+    }
+
+    private static int glyphColorFor(Hit hit) {
+        return ItemGroupColors.iconEdge(layoutFor(hit), hit.fold().groupId());
+    }
+
+    private static void drawMarker(GuiGraphics g, int x, int y, boolean open, int color) {
+        RenderType over = RenderType.guiOverlay();
+        if (!open) {
+            g.fill(over, x + 11, y + 9, x + 14, y + 16, GLYPH_EDGE);
+        }
+        g.fill(over, x + 9, y + 11, x + 16, y + 14, GLYPH_EDGE);
+        if (!open) {
+            g.fill(over, x + 12, y + 10, x + 13, y + 15, color);
+        }
+        g.fill(over, x + 10, y + 12, x + 15, y + 13, color);
     }
 
     private static ResourceLocation idOf(CreativeModeTab tab) {
@@ -113,6 +190,11 @@ public final class ItemGroupSlots {
     }
 
     private static Hit hitFor(CreativeModeInventoryScreen screen, int slotIndex) {
+        Hit hit = spanAt(screen, slotIndex);
+        return hit == null || !hit.head() ? null : hit;
+    }
+
+    private static Hit spanAt(CreativeModeInventoryScreen screen, int slotIndex) {
         if (slotIndex < 0 || slotIndex >= COLS * VISIBLE_ROWS) {
             return null;
         }
@@ -121,11 +203,16 @@ public final class ItemGroupSlots {
             return null;
         }
         ResourceLocation tabId = idOf(tab);
-        List<Section<?>> sections = tabId == null ? null : FancyTabSections.REGISTERED_TABS.get(tabId);
-        if (sections == null || sections.isEmpty()) {
+        if (tabId == null) {
             return null;
         }
         int absolute = topRow(screen) * COLS + slotIndex;
+        List<Section<?>> sections = FancyTabSections.REGISTERED_TABS.get(tabId);
+        if (sections == null || sections.isEmpty()) {
+            ResourceLocation flatKey = ItemGroupRuntime.flatKey(tabId);
+            ItemGroupRuntime.Fold flat = ItemGroupRuntime.owningFold(flatKey, absolute);
+            return flat == null ? null : new Hit(flatKey, tabId, flat, flat.index() == absolute);
+        }
 
         int row = 0;
         for (Section<?> section : sections) {
@@ -133,8 +220,14 @@ public final class ItemGroupSlots {
             boolean collapsed = FTSInternal.isCollapsed(section);
             int size = collapsed ? 0 : section.items().getStacks().size();
             if (size > 0 && absolute >= contentStart && absolute < contentStart + size) {
-                ItemGroupRuntime.Fold fold = ItemGroupRuntime.foldAt(section.id(), absolute - contentStart);
-                return fold == null ? null : new Hit(section.id(), fold);
+                int local = absolute - contentStart;
+                ItemGroupRuntime.Fold fold = ItemGroupRuntime.owningFold(section.id(), local);
+                if (fold != null) {
+                    return new Hit(section.id(), null, fold, fold.index() == local);
+                }
+                ResourceLocation flatKey = ItemGroupRuntime.flatKey(section.id());
+                ItemGroupRuntime.Fold folded = ItemGroupRuntime.owningFold(flatKey, local);
+                return folded == null ? null : new Hit(flatKey, section.id(), folded, folded.index() == local);
             }
             row += 1 + (size == 0 ? 0 : Mth.positiveCeilDiv(size, COLS));
         }

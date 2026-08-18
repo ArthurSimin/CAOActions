@@ -206,12 +206,12 @@ public class TextBannerCreditsScreen extends Screen {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return List.of();
+                return RowChildren.none();
             }
 
             @Override

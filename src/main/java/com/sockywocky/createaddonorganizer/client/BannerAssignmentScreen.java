@@ -274,12 +274,12 @@ public class BannerAssignmentScreen extends Screen {
 
             @Override
             public List<? extends GuiEventListener> children() {
-                return edit != null ? List.of(edit) : List.of();
+                return RowChildren.of(edit);
             }
 
             @Override
             public List<? extends NarratableEntry> narratables() {
-                return edit != null ? List.of(edit) : List.of();
+                return RowChildren.of(edit);
             }
 
             @Override

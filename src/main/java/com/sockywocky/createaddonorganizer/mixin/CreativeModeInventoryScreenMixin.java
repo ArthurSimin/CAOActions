@@ -41,7 +41,7 @@ public abstract class CreativeModeInventoryScreenMixin {
     @Shadow
     protected abstract void refreshCurrentTabContents(Collection<ItemStack> items);
 
-    @Inject(method = "getTooltipFromContainerItem", at = @At("RETURN"))
+    @Inject(method = "getTooltipFromContainerItem", at = @At("RETURN"), cancellable = true)
     private void createaddonorganizer$itemGroupTooltip(ItemStack stack,
             CallbackInfoReturnable<List<Component>> cir) {
         Slot hovered = ((AbstractContainerScreenAccessor) this).getHoveredSlot();
@@ -91,10 +91,15 @@ public abstract class CreativeModeInventoryScreenMixin {
         }
     }
 
+    @Inject(method = "renderBg", at = @At("TAIL"))
+    private void createaddonorganizer$itemGroupOutlines(GuiGraphics guiGraphics, float partialTick,
+            int mouseX, int mouseY, CallbackInfo ci) {
+        ItemGroupSlots.renderRuns((CreativeModeInventoryScreen) (Object) this, guiGraphics);
+    }
+
     @Inject(method = "render", at = @At("TAIL"))
     private void createaddonorganizer$renderSectionIndex(GuiGraphics guiGraphics, int mouseX, int mouseY,
             float partialTick, CallbackInfo ci) {
-        ItemGroupSlots.render((CreativeModeInventoryScreen) (Object) this, guiGraphics);
         SectionIndexPanel.render((CreativeModeInventoryScreen) (Object) this, guiGraphics, mouseX, mouseY);
         CollapseSync.tick();
         CondensedCreativeSupport.consumeResync(this);

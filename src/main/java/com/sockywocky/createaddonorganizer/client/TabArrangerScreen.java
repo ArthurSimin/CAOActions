@@ -218,9 +218,15 @@ public class TabArrangerScreen extends Screen {
         return panelH - 4;
     }
 
+    private int cardRows() {
+        if (!pagesMode || cardCols <= 0) {
+            return 0;
+        }
+        return (pageCount() + cardCols - 1) / cardCols;
+    }
+
     private int barThumbH() {
-        return Math.max(10, barTrackH() * visibleCardRows()
-                / Math.max(1, (pageCount() + cardCols - 1) / cardCols));
+        return Math.max(10, barTrackH() * visibleCardRows() / Math.max(1, cardRows()));
     }
 
     private boolean overScrollbar(double mouseX, double mouseY) {
@@ -252,8 +258,7 @@ public class TabArrangerScreen extends Screen {
     }
 
     private int maxScrollRow() {
-        int rows = (pageCount() + cardCols - 1) / cardCols;
-        return Math.max(0, rows - visibleCardRows());
+        return Math.max(0, cardRows() - visibleCardRows());
     }
 
     private int hitIndex(double mouseX, double mouseY) {

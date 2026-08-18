@@ -11,6 +11,8 @@ import com.sockywocky.createaddonorganizer.client.MenuPixels;
 import com.sockywocky.createaddonorganizer.Config;
 import com.sockywocky.createaddonorganizer.client.MenuSkin;
 import com.sockywocky.createaddonorganizer.client.ScreenSwoosh;
+import com.sockywocky.createaddonorganizer.client.TextEditScreen;
+import com.sockywocky.createaddonorganizer.client.TextEditorOverlay;
 import com.sockywocky.createaddonorganizer.client.ModBannerCatalog;
 import com.sockywocky.createaddonorganizer.client.Notice;
 import com.sockywocky.createaddonorganizer.client.RemoteBannerPools;
@@ -21,6 +23,8 @@ import com.sockywocky.createaddonorganizer.client.SectionColorsScreen;
 import com.sockywocky.createaddonorganizer.client.TabEditorScreen;
 import com.sockywocky.createaddonorganizer.client.UpdateCheck;
 import com.sockywocky.createaddonorganizer.mixin.CreativeModeInventoryScreenAccessor;
+
+import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Button;
@@ -69,6 +73,12 @@ public class createaddonorganizerClient {
     private static final KeyMapping EDIT_TAB_KEY = new KeyMapping("key.createaddonorganizer.editTab",
             InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "key.categories.createaddonorganizer");
 
+    private static final KeyMapping EDIT_TEXT_KEY = new KeyMapping("key.createaddonorganizer.editText",
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F6, "key.categories.createaddonorganizer");
+
+    private static final KeyMapping TEXT_OVERLAY_KEY = new KeyMapping("key.createaddonorganizer.textOverlay",
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F7, "key.categories.createaddonorganizer");
+
     private static Button clearCacheButton;
     private static String clearCacheLabel;
 
@@ -89,6 +99,8 @@ public class createaddonorganizerClient {
         modEventBus.addListener((RegisterKeyMappingsEvent event) -> {
             event.register(OPEN_CONFIG_KEY);
             event.register(EDIT_TAB_KEY);
+            event.register(EDIT_TEXT_KEY);
+            event.register(TEXT_OVERLAY_KEY);
         });
         modEventBus.addListener((RegisterClientReloadListenersEvent event) ->
                 event.registerReloadListener((ResourceManagerReloadListener) manager -> {
@@ -133,6 +145,10 @@ public class createaddonorganizerClient {
     }
 
     private static void onScreenKeyPressed(ScreenEvent.KeyPressed.Pre event) {
+        if (handleTextEditorKey(event.getScreen(), event.getKeyCode(), event.getScanCode())) {
+            event.setCanceled(true);
+            return;
+        }
         if (!(event.getScreen() instanceof CreativeModeInventoryScreen screen)) {
             return;
         }
@@ -149,6 +165,22 @@ public class createaddonorganizerClient {
         }
         Minecraft.getInstance().setScreen(new TabEditorScreen(screen, tabId));
         event.setCanceled(true);
+    }
+
+    private static boolean handleTextEditorKey(Screen screen, int keyCode, int scanCode) {
+        if (screen instanceof TextEditScreen || !TextEditorOverlay.enabled()) {
+            return false;
+        }
+        InputConstants.Key key = InputConstants.getKey(keyCode, scanCode);
+        if (EDIT_TEXT_KEY.isActiveAndMatches(key)) {
+            TextEditorOverlay.editHovered();
+            return true;
+        }
+        if (TEXT_OVERLAY_KEY.isActiveAndMatches(key)) {
+            TextEditorOverlay.toggleBoxes();
+            return true;
+        }
+        return false;
     }
 
     private static void refreshClearCacheButton() {
@@ -175,12 +207,14 @@ public class createaddonorganizerClient {
         LoadingSpinner.renderPreview(event.getGuiGraphics(), mc);
         Notice.render(event.getGuiGraphics(), mc);
         FpsMonitor.render(event.getGuiGraphics(), mc);
+        TextEditorOverlay.render(event.getGuiGraphics(), mc);
     }
 
     private static void onHudRender(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen == null) {
             FpsMonitor.render(event.getGuiGraphics(), mc);
+            TextEditorOverlay.render(event.getGuiGraphics(), mc);
         }
     }
 
@@ -195,6 +229,13 @@ public class createaddonorganizerClient {
         }
         ScreenSwoosh.update();
         DevMode.tick(mc);
+        TextEditorOverlay.tick();
+        while (EDIT_TEXT_KEY.consumeClick()) {
+            TextEditorOverlay.editHovered();
+        }
+        while (TEXT_OVERLAY_KEY.consumeClick()) {
+            TextEditorOverlay.toggleBoxes();
+        }
         LoadingSpinner.tickPreview(mc);
         MenuSkin.tickCog();
         if (!remoteSyncStarted) {

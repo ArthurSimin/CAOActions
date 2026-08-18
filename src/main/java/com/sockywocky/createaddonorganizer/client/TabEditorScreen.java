@@ -1,8 +1,10 @@
 package com.sockywocky.createaddonorganizer.client;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +96,6 @@ public class TabEditorScreen extends Screen {
     private static final float FLY_DROP = 28f;
     private static final float FLY_SHRINK = 0.35f;
     private static final long THUNK_MS = 130;
-    private static final long LOCATE_MS = 840;
 
     private static final int ACCENT_BASE = GlassSkin.DEFAULT_ACCENT;
 
@@ -161,7 +162,7 @@ public class TabEditorScreen extends Screen {
     private boolean contentsScrollbarActive;
     private boolean libScrollbarActive;
 
-    private final Map<TabLayout.Entry, Slide> slides = new HashMap<>();
+    private final Map<TabLayout.Entry, Slide> slides = new IdentityHashMap<>();
 
     private static final class Slide {
         private float fromX;
@@ -179,7 +180,7 @@ public class TabEditorScreen extends Screen {
     private Button addSectionButton;
     private Button groupsButton;
     private final List<TabLayout.Entry> carried = new ArrayList<>();
-    private final Set<TabLayout.Entry> carriedSet = new HashSet<>();
+    private final Set<TabLayout.Entry> carriedSet = identitySet();
     private boolean dragging;
     private boolean frozen;
     private double pressX;
@@ -196,18 +197,23 @@ public class TabEditorScreen extends Screen {
     private int landedCount;
 
     private final List<Fly> flying = new ArrayList<>();
-    private final Map<String, Long> popStart = new HashMap<>();
-    private String locateItem;
-    private long locateStart;
-    private int[] locateBox;
+    private final Map<TabLayout.Entry, Long> popStart = new IdentityHashMap<>();
 
     private EditBox renameBox;
     private int renameEntry = -1;
 
-    private final Set<String> selected = new LinkedHashSet<>();
+    private final List<TabLayout.Entry> selection = new ArrayList<>();
+    private final Set<TabLayout.Entry> selected = identitySet();
+    private boolean ctrlSelecting;
+    private boolean ctrlAdding;
     private Button groupButton;
 
+    private static Set<TabLayout.Entry> identitySet() {
+        return Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+
     private final List<Placed> placed = new ArrayList<>();
+    private final Map<Long, Placed> cellAt = new HashMap<>();
 
     private record Placed(TabLayout.Entry entry, int index, int x, int y, boolean header, Integer section) {}
 
@@ -235,7 +241,7 @@ public class TabEditorScreen extends Screen {
         this.realTab = BuiltInRegistries.CREATIVE_MODE_TAB.get(tabId);
     }
 
-    private final Set<String> contained = new HashSet<>();
+    private final Map<String, Integer> containedCounts = new HashMap<>();
     private boolean pendingLive;
     private TabLayout working;
 
@@ -442,7 +448,10 @@ public class TabEditorScreen extends Screen {
         TabLayoutStore.putQuiet(updated);
         pendingLive = true;
         rebuildContainedIndex(updated);
-        selected.retainAll(contained);
+        Set<TabLayout.Entry> live = identitySet();
+        live.addAll(updated.safeEntries());
+        selected.retainAll(live);
+        selection.removeIf(entry -> !selected.contains(entry));
         refreshGroupButton();
         layoutContents();
     }
@@ -501,15 +510,17 @@ public class TabEditorScreen extends Screen {
                 : "createaddonorganizer.tabs.group"));
     }
 
-    private List<String> selectableSelection() {
+    private List<TabLayout.Entry> selectableSelection() {
         TabLayout tab = tab();
         if (tab == null || selected.isEmpty()) {
             return List.of();
         }
-        List<String> out = new ArrayList<>(selected.size());
-        for (TabLayout.Entry entry : tab.safeEntries()) {
-            if (entry.isItem() && selected.contains(entry.item())) {
-                out.add(entry.item());
+        Set<TabLayout.Entry> live = identitySet();
+        live.addAll(tab.safeEntries());
+        List<TabLayout.Entry> out = new ArrayList<>(selection.size());
+        for (TabLayout.Entry entry : selection) {
+            if (entry.isItem() && live.contains(entry)) {
+                out.add(entry);
             }
         }
         return out;
@@ -522,7 +533,7 @@ public class TabEditorScreen extends Screen {
         }
         String groupId = null;
         for (TabLayout.Entry entry : tab.safeEntries()) {
-            if (!entry.isItem() || !selected.contains(entry.item())) {
+            if (!entry.isItem() || !selected.contains(entry)) {
                 continue;
             }
             String id = entry.groupId();
@@ -538,11 +549,79 @@ public class TabEditorScreen extends Screen {
         return groupId != null && selected.size() == tab.membersOf(groupId).size() ? groupId : null;
     }
 
-    private void toggleSelected(String itemId) {
-        if (!selected.remove(itemId)) {
-            selected.add(itemId);
+    private void select(TabLayout.Entry entry) {
+        if (selected.add(entry)) {
+            selection.add(entry);
         }
         refreshGroupButton();
+    }
+
+    private void deselect(TabLayout.Entry entry) {
+        if (selected.remove(entry)) {
+            selection.removeIf(held -> held == entry);
+        }
+        refreshGroupButton();
+    }
+
+    private void clearSelection() {
+        selected.clear();
+        selection.clear();
+        refreshGroupButton();
+    }
+
+    private static long cellKey(int x, int y) {
+        return ((long) x << 32) ^ (y & 0xFFFFFFFFL);
+    }
+
+    private Placed neighbour(Placed p, int dx, int dy) {
+        return cellAt.get(cellKey(p.x() + dx * CELL, p.y() + dy * CELL));
+    }
+
+    private boolean isSelected(Placed p) {
+        return p != null && selected.contains(p.entry());
+    }
+
+    private boolean touchesSelection(Placed p) {
+        if (p == null) {
+            return false;
+        }
+        return isSelected(neighbour(p, -1, 0)) || isSelected(neighbour(p, 1, 0))
+                || isSelected(neighbour(p, 0, -1)) || isSelected(neighbour(p, 0, 1));
+    }
+
+    private void beginCtrlSelect(Placed p) {
+        ctrlSelecting = true;
+        if (selected.contains(p.entry())) {
+            ctrlAdding = false;
+            deselect(p.entry());
+            Sfx.gridStep();
+            return;
+        }
+        ctrlAdding = true;
+        if (!selection.isEmpty() && !touchesSelection(p)) {
+            clearSelection();
+        }
+        select(p.entry());
+        Sfx.gridStep();
+    }
+
+    private void paintCtrlSelect(double mouseX, double mouseY) {
+        Placed p = placedAt(mouseX, mouseY);
+        if (p == null || p.header() || !p.entry().isItem()) {
+            return;
+        }
+        if (ctrlAdding) {
+            if (selected.contains(p.entry()) || !touchesSelection(p)) {
+                return;
+            }
+            select(p.entry());
+        } else {
+            if (!selected.contains(p.entry())) {
+                return;
+            }
+            deselect(p.entry());
+        }
+        Sfx.gridStep();
     }
 
     private void groupSelection() {
@@ -553,26 +632,24 @@ public class TabEditorScreen extends Screen {
         String dissolve = selectionIsWholeGroup();
         if (dissolve != null) {
             mutate(tab.withGroupDissolved(dissolve));
-            selected.clear();
-            refreshGroupButton();
+            clearSelection();
             Sfx.snap();
             return;
         }
-        List<String> members = selectableSelection();
+        List<TabLayout.Entry> members = selectableSelection();
         if (members.size() < 2) {
             Sfx.denied();
             return;
         }
         String title = Component.translatable("createaddonorganizer.tabs.defaultGroupName",
                 tab.itemGroupCount() + 1).getString();
-        TabLayout updated = tab.withItemsGrouped(members, title);
+        TabLayout updated = tab.withEntriesGrouped(members, title, members.get(0).item());
         if (updated == tab) {
             Sfx.denied();
             return;
         }
         mutate(updated);
-        selected.clear();
-        refreshGroupButton();
+        clearSelection();
         Sfx.snap();
         Notice.show(Component.translatable("createaddonorganizer.tabs.group.made", title, members.size()),
                 Notice.GREEN);
@@ -583,12 +660,8 @@ public class TabEditorScreen extends Screen {
     }
 
     private void rebuildContainedIndex(TabLayout tab) {
-        contained.clear();
-        for (TabLayout.Entry entry : tab.safeEntries()) {
-            if (entry.isItem()) {
-                contained.add(entry.item());
-            }
-        }
+        containedCounts.clear();
+        containedCounts.putAll(tab.itemCounts());
     }
 
     private void refreshLive() {
@@ -659,7 +732,7 @@ public class TabEditorScreen extends Screen {
         library = new ItemGridWidget(libX, libY, libW, libH);
         library.setEntries(ItemLibrary.search(""));
         rebuildContainedIndex(tab);
-        library.setDimmed(entry -> contained.contains(entry.id()));
+        library.setPlacedCount(entry -> containedCounts.getOrDefault(entry.id(), 0));
         addRenderableWidget(library);
 
         addRenderableWidget(Button.builder(Component.translatable(isCustom()
@@ -988,6 +1061,7 @@ public class TabEditorScreen extends Screen {
             return;
         }
         placed.clear();
+        cellAt.clear();
         List<TabLayout.Entry> entries = previewEntries();
         int cols = Math.max(1, contentsCols);
         int y = 0;
@@ -1008,7 +1082,9 @@ public class TabEditorScreen extends Screen {
                 placed.add(new Placed(entry, i, 0, y, true, section));
                 y += HEADER_H + SECTION_GAP;
             } else if (entry.isItem()) {
-                placed.add(new Placed(entry, i, col * CELL, y, false, section));
+                Placed cell = new Placed(entry, i, col * CELL, y, false, section);
+                placed.add(cell);
+                cellAt.put(cellKey(cell.x(), cell.y()), cell);
                 col++;
                 if (col >= cols) {
                     col = 0;
@@ -1022,7 +1098,7 @@ public class TabEditorScreen extends Screen {
         }
         contentsHeightPx = y;
         clampContentsScroll();
-        Set<TabLayout.Entry> live = new HashSet<>();
+        Set<TabLayout.Entry> live = identitySet();
         for (Placed p : placed) {
             live.add(p.entry());
         }
@@ -1115,7 +1191,7 @@ public class TabEditorScreen extends Screen {
             return block;
         }
         List<TabLayout.Entry> entries = tab.safeEntries();
-        int start = entries.indexOf(header);
+        int start = TabLayout.indexOfSame(entries, header);
         if (start < 0) {
             return block;
         }
@@ -1260,7 +1336,7 @@ public class TabEditorScreen extends Screen {
         if (carriedSet.contains(p.entry())) {
             return -1;
         }
-        int index = source.indexOf(p.entry());
+        int index = TabLayout.indexOfSame(source, p.entry());
         if (index < 0) {
             return -1;
         }
@@ -1291,7 +1367,7 @@ public class TabEditorScreen extends Screen {
         if (carriedSet.contains(best.entry())) {
             return -1;
         }
-        int index = source.indexOf(best.entry());
+        int index = TabLayout.indexOfSame(source, best.entry());
         if (index < 0) {
             return source.size();
         }
@@ -1309,7 +1385,7 @@ public class TabEditorScreen extends Screen {
         if (carriedSet.contains(p.entry())) {
             return -1;
         }
-        int index = source.indexOf(p.entry());
+        int index = TabLayout.indexOfSame(source, p.entry());
         if (index < 0) {
             return -1;
         }
@@ -1378,8 +1454,7 @@ public class TabEditorScreen extends Screen {
                     return true;
                 }
                 if (!p.header() && p.entry().isItem() && hasControlDown()) {
-                    toggleSelected(p.entry().item());
-                    Sfx.gridStep();
+                    beginCtrlSelect(p);
                     return true;
                 }
                 if (overHeaderBadge(p, mouseX, mouseY)) {
@@ -1387,7 +1462,7 @@ public class TabEditorScreen extends Screen {
                     return true;
                 }
                 setCarried(p.header() ? sectionBlock(p.entry()) : List.of(p.entry()));
-                dropTarget = tab().safeEntries().indexOf(p.entry());
+                dropTarget = TabLayout.indexOfSame(tab().safeEntries(), p.entry());
                 pressX = mouseX;
                 pressY = mouseY;
                 dragging = false;
@@ -1423,8 +1498,7 @@ public class TabEditorScreen extends Screen {
         this.minecraft.setScreen(new ItemGroupsScreen(this, tab, updated -> {
             if (updated != null) {
                 mutate(updated);
-                selected.clear();
-                refreshGroupButton();
+                clearSelection();
             }
         }));
     }
@@ -1437,8 +1511,7 @@ public class TabEditorScreen extends Screen {
         this.minecraft.setScreen(new ItemGroupEditScreen(this, tab, groupId, updated -> {
             if (updated != null) {
                 mutate(updated);
-                selected.clear();
-                refreshGroupButton();
+                clearSelection();
             }
         }));
     }
@@ -1460,6 +1533,10 @@ public class TabEditorScreen extends Screen {
             if (library != null) {
                 library.dragScrollbar(mouseY);
             }
+            return true;
+        }
+        if (ctrlSelecting) {
+            paintCtrlSelect(mouseX, mouseY);
             return true;
         }
         if (libPress != null && !libPressResolved && moved(mouseX, mouseY)) {
@@ -1510,16 +1587,17 @@ public class TabEditorScreen extends Screen {
         TabLayout current = tab();
         ItemLibrary.Entry pressed = libPress;
         libPress = null;
-        if (current == null || pressed == null || current.containsItem(pressed.id())) {
+        if (current == null || pressed == null) {
             return;
         }
-        TabLayout updated = current.withItemAdded(pressed.id());
+        TabLayout.Entry added = TabLayout.Entry.item(pressed.id());
+        TabLayout updated = current.withEntryInserted(added, -1);
         mutate(updated);
         List<TabLayout.Entry> entries = updated.safeEntries();
         if (entries.isEmpty()) {
             return;
         }
-        setCarried(List.of(entries.get(entries.size() - 1)));
+        setCarried(List.of(added));
         dropTarget = entries.size() - 1;
         dragging = true;
     }
@@ -1541,6 +1619,10 @@ public class TabEditorScreen extends Screen {
         }
         if (libScrollbarActive) {
             libScrollbarActive = false;
+            return true;
+        }
+        if (ctrlSelecting) {
+            ctrlSelecting = false;
             return true;
         }
         if (libPress != null && !libPressResolved) {
@@ -1588,12 +1670,10 @@ public class TabEditorScreen extends Screen {
             return;
         }
         if (hasShiftDown()) {
-            List<TabLayout.Entry> entries = new ArrayList<>(tab.safeEntries());
-            entries.remove(entry);
             if (entry.section().equals(activeSection)) {
                 activeSection = null;
             }
-            mutate(tab.withEntries(entries));
+            mutate(tab.withEntriesRemoved(List.of(entry)));
             return;
         }
         activeSection = entry.section().equals(activeSection) ? null : entry.section();
@@ -1604,14 +1684,10 @@ public class TabEditorScreen extends Screen {
         if (current == null) {
             return;
         }
-        if (current.containsItem(entry.id())) {
-            locateItem = entry.id();
-            locateStart = System.currentTimeMillis();
-            return;
-        }
         int index = activeSection == null ? -1 : sectionEndIndex(activeSection);
-        mutate(current.withItemInserted(entry.id(), index));
-        popStart.put(entry.id(), System.currentTimeMillis());
+        TabLayout.Entry added = TabLayout.Entry.item(entry.id());
+        mutate(current.withEntryInserted(added, index));
+        popStart.put(added, System.currentTimeMillis());
     }
 
     private void binDrop() {
@@ -1620,7 +1696,6 @@ public class TabEditorScreen extends Screen {
             return;
         }
         long now = System.currentTimeMillis();
-        TabLayout updated = tab;
         int shown = 0;
         boolean animate = Config.animOn(Config.ANIM_BIN);
         long stagger = carried.size() > FLY_MAX ? FLY_STAGGER / 2 : FLY_STAGGER;
@@ -1631,17 +1706,11 @@ public class TabEditorScreen extends Screen {
                     flying.add(new Fly(ItemLibrary.stackOf(entry.item()), startY, now + shown * stagger));
                     shown++;
                 }
-                updated = updated.withItemRemoved(entry.item());
-            } else {
-                List<TabLayout.Entry> entries = new ArrayList<>(updated.safeEntries());
-                entries.remove(entry);
-                if (entry.section().equals(activeSection)) {
-                    activeSection = null;
-                }
-                updated = updated.withEntries(entries);
+            } else if (entry.section() != null && entry.section().equals(activeSection)) {
+                activeSection = null;
             }
         }
-        mutate(updated);
+        mutate(tab.withEntriesRemoved(new ArrayList<>(carried)));
         setLid(true);
         landedCount = 0;
         if (shown == 0) {
@@ -1698,18 +1767,18 @@ public class TabEditorScreen extends Screen {
         return 1f - inv * inv * inv;
     }
 
-    private float popScale(String itemId) {
-        Long start = popStart.get(itemId);
+    private float popScale(TabLayout.Entry placement) {
+        Long start = popStart.get(placement);
         if (start == null) {
             return 1f;
         }
         if (!Config.animOn(Config.ANIM_ITEM_POP)) {
-            popStart.remove(itemId);
+            popStart.remove(placement);
             return 1f;
         }
         long elapsed = System.currentTimeMillis() - start;
         if (elapsed >= POP_MS) {
-            popStart.remove(itemId);
+            popStart.remove(placement);
             return 1f;
         }
         float t = elapsed / (float) POP_MS;
@@ -1911,7 +1980,6 @@ public class TabEditorScreen extends Screen {
 
         RenderProfiler.begin(RenderProfiler.GRID);
         g.enableScissor(contentsX, contentsY, contentsX + contentsW, contentsY + contentsH);
-        locateBox = null;
         g.drawManaged(() -> renderContentsPane(g, tab));
         renderPendingHeaders(g, tab, mouseX, mouseY);
         g.disableScissor();
@@ -2105,7 +2173,6 @@ public class TabEditorScreen extends Screen {
         }
         SafeIcon.endBatch(g);
         IconAtlas.flushQuads(g);
-        renderLocatePulse(g);
     }
 
     private void renderPendingHeaders(GuiGraphics g, TabLayout tab, int mouseX, int mouseY) {
@@ -2223,10 +2290,75 @@ public class TabEditorScreen extends Screen {
         }
     }
 
-    private static final int GROUP_TINT = 0x3855C8E0;
-    private static final int GROUP_EDGE = 0xB055C8E0;
-    private static final int GROUP_ICON_EDGE = 0xFF8FE4F5;
+    private static final int SELECT_TINT = 0x30FFD86B;
     private static final int SELECT_EDGE = 0xFFFFD86B;
+    private static final int SELECT_HEAD = 0xFFFFF3C6;
+
+    private interface Membership {
+        boolean covers(Placed p);
+    }
+
+    private static boolean sameGroup(Placed p, String groupId) {
+        return p != null && !p.header() && p.entry().isItem() && groupId.equals(p.entry().groupId());
+    }
+
+    private void connectedFill(GuiGraphics g, RenderType type, Placed p, int x, int y, int color,
+            Membership member) {
+        int left = member.covers(neighbour(p, -1, 0)) ? x : x + 1;
+        int right = member.covers(neighbour(p, 1, 0)) ? x + CELL : x + CELL - 1;
+        int top = member.covers(neighbour(p, 0, -1)) ? y : y + 1;
+        int bottom = member.covers(neighbour(p, 0, 1)) ? y + CELL : y + CELL - 1;
+        g.fill(type, left, top, right, bottom, color);
+    }
+
+    private void connectedOutline(GuiGraphics g, RenderType type, Placed p, int x, int y, int inset,
+            int color, Membership member) {
+        boolean left = member.covers(neighbour(p, -1, 0));
+        boolean right = member.covers(neighbour(p, 1, 0));
+        boolean up = member.covers(neighbour(p, 0, -1));
+        boolean down = member.covers(neighbour(p, 0, 1));
+        int x1 = x + inset;
+        int y1 = y + inset;
+        int x2 = x + CELL - inset;
+        int y2 = y + CELL - inset;
+        int spanLeft = left ? x : x1;
+        int spanRight = right ? x + CELL : x2;
+        int spanTop = up ? y : y1;
+        int spanBottom = down ? y + CELL : y2;
+        if (!up) {
+            g.fill(type, spanLeft, y1, spanRight, y1 + 1, color);
+        }
+        if (!down) {
+            g.fill(type, spanLeft, y2 - 1, spanRight, y2, color);
+        }
+        if (!left) {
+            g.fill(type, x1, spanTop, x1 + 1, spanBottom, color);
+        }
+        if (!right) {
+            g.fill(type, x2 - 1, spanTop, x2, spanBottom, color);
+        }
+    }
+
+    private static void cornerMarks(GuiGraphics g, int x, int y, int color) {
+        RenderType over = RenderType.guiOverlay();
+        int arm = 4;
+        int x1 = x + 2;
+        int y1 = y + 2;
+        int x2 = x + CELL - 2;
+        int y2 = y + CELL - 2;
+        g.fill(over, x1, y1, x1 + arm, y1 + 1, color);
+        g.fill(over, x1, y1, x1 + 1, y1 + arm, color);
+        g.fill(over, x2 - arm, y1, x2, y1 + 1, color);
+        g.fill(over, x2 - 1, y1, x2, y1 + arm, color);
+        g.fill(over, x1, y2 - 1, x1 + arm, y2, color);
+        g.fill(over, x1, y2 - arm, x1 + 1, y2, color);
+        g.fill(over, x2 - arm, y2 - 1, x2, y2, color);
+        g.fill(over, x2 - 1, y2 - arm, x2, y2, color);
+    }
+
+    private boolean isSelectionHead(TabLayout.Entry entry) {
+        return !selection.isEmpty() && selection.get(0) == entry;
+    }
 
     private void renderItemCell(GuiGraphics g, Placed p, int x, int y) {
         drawCell(g, x, y, activeSection != null && activeSection.equals(p.section()));
@@ -2234,16 +2366,25 @@ public class TabEditorScreen extends Screen {
         TabLayout tab = tab();
         String groupId = p.entry().groupId();
         if (tab != null && groupId != null) {
-            g.fill(x + 1, y + 1, x + CELL - 1, y + CELL - 1, GROUP_TINT);
-            boolean isIcon = p.entry().item().equals(tab.iconItemOf(groupId));
-            outline(g, x, y, x + CELL, y + CELL, isIcon ? GROUP_ICON_EDGE : GROUP_EDGE);
+            Membership member = other -> sameGroup(other, groupId);
+            connectedFill(g, RenderType.gui(), p, x, y, ItemGroupColors.tint(tab, groupId), member);
+            connectedOutline(g, RenderType.gui(), p, x, y, 0, ItemGroupColors.edge(tab, groupId), member);
+            if (p.entry().item().equals(tab.iconItemOf(groupId))) {
+                cornerMarks(g, x, y, ItemGroupColors.iconEdge(tab, groupId));
+            }
         }
-        if (selected.contains(p.entry().item())) {
-            outline(g, x + 1, y + 1, x + CELL - 1, y + CELL - 1, SELECT_EDGE);
+        if (selected.contains(p.entry())) {
+            RenderType over = RenderType.guiOverlay();
+            Membership member = this::isSelected;
+            connectedFill(g, over, p, x, y, SELECT_TINT, member);
+            connectedOutline(g, over, p, x, y, 1, SELECT_EDGE, member);
+            if (isSelectionHead(p.entry())) {
+                cornerMarks(g, x, y, SELECT_HEAD);
+            }
         }
 
         ItemStack stack = ItemLibrary.stackOf(p.entry().item());
-        float scale = popScale(p.entry().item());
+        float scale = popScale(p.entry());
         if (scale >= 0.999f) {
             if (!IconAtlas.queue(stack, x + 1, y + 1)) {
                 SafeIcon.batched(g, stack, x + 1, y + 1);
@@ -2258,32 +2399,6 @@ public class TabEditorScreen extends Screen {
             SafeIcon.render(g, stack, x + 1, y + 1);
             g.pose().popPose();
         }
-
-        if (p.entry().item().equals(locateItem)) {
-            locateBox = new int[] {x, y};
-        }
-    }
-
-    private void renderLocatePulse(GuiGraphics g) {
-        if (locateItem == null) {
-            return;
-        }
-        long elapsed = System.currentTimeMillis() - locateStart;
-        if (elapsed >= LOCATE_MS) {
-            locateItem = null;
-            return;
-        }
-        if (locateBox == null) {
-            return;
-        }
-        float wave = (float) Math.abs(Math.sin(elapsed / (double) LOCATE_MS * Math.PI * 2.0));
-        int x = locateBox[0];
-        int y = locateBox[1];
-        int color = withAlpha(accent(), wave);
-        g.fill(RenderType.guiOverlay(), x, y, x + CELL, y + 1, color);
-        g.fill(RenderType.guiOverlay(), x, y + CELL - 1, x + CELL, y + CELL, color);
-        g.fill(RenderType.guiOverlay(), x, y, x + 1, y + CELL, color);
-        g.fill(RenderType.guiOverlay(), x + CELL - 1, y, x + CELL, y + CELL, color);
     }
 
     private void renderBin(GuiGraphics g) {

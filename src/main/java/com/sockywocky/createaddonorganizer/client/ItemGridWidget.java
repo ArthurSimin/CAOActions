@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -24,10 +26,12 @@ public class ItemGridWidget extends AbstractWidget {
     private static final long SLIDE_MS = 130;
     private static final long FADE_MS = 150;
     private static final int HOVER = (0x55 << 24) | (GlassSkin.DEFAULT_ACCENT_LIT & 0x00FFFFFF);
+    private static final int BADGE = 0xFFFFD86B;
+    private static final float BADGE_Z = 300f;
 
     private List<ItemLibrary.Entry> entries = List.of();
     private Consumer<ItemLibrary.Entry> onClick = e -> {};
-    private Predicate<ItemLibrary.Entry> dimmed = e -> false;
+    private ToIntFunction<ItemLibrary.Entry> placedCount = e -> 0;
     private int scrollRow;
     private final SmoothScroll rowGlide = new SmoothScroll();
     private float glideTopPx;
@@ -60,8 +64,22 @@ public class ItemGridWidget extends AbstractWidget {
         this.onClick = handler == null ? e -> {} : handler;
     }
 
-    public void setDimmed(Predicate<ItemLibrary.Entry> predicate) {
-        this.dimmed = predicate == null ? e -> false : predicate;
+    public void setPlacedCount(ToIntFunction<ItemLibrary.Entry> counter) {
+        this.placedCount = counter == null ? e -> 0 : counter;
+    }
+
+    private void drawPlacedBadge(GuiGraphics g, ItemLibrary.Entry entry, int x, int y) {
+        int count = placedCount.applyAsInt(entry);
+        if (count <= 0) {
+            return;
+        }
+        String text = count > 99 ? "99+" : String.valueOf(count);
+        Font font = Minecraft.getInstance().font;
+        g.pose().pushPose();
+        g.pose().translate(0f, 0f, BADGE_Z);
+        g.drawString(font, text, x + CELL - 1 - font.width(text), y + CELL - 9,
+                MenuSkin.accent(BADGE), true);
+        g.pose().popPose();
     }
 
     public void setAnimate(boolean value) {
@@ -171,12 +189,10 @@ public class ItemGridWidget extends AbstractWidget {
                 }
                 int x = this.getX() + INSET + col * CELL;
                 int y = this.getY() + Math.round(row * CELL - glideTopPx);
-                if (dimmed.test(entries.get(index))) {
-                    fillOverIcon(g, x + 1, y + 1, x + CELL - 1, y + CELL - 1, 0xC0101010);
-                }
                 if (inside && mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL) {
                     fillOverIcon(g, x + 1, y + 1, x + CELL - 1, y + CELL - 1, MenuSkin.accent(HOVER));
                 }
+                drawPlacedBadge(g, entries.get(index), x, y);
             }
         }
     }
@@ -223,9 +239,7 @@ public class ItemGridWidget extends AbstractWidget {
 
             TabEditorScreen.drawCell(g, dx, dy);
             SafeIcon.render(g, entry.stack(), dx + 1, dy + 1);
-            if (dimmed.test(entry)) {
-                fillOverIcon(g, dx + 1, dy + 1, dx + CELL - 1, dy + CELL - 1, 0xC0101010);
-            }
+            drawPlacedBadge(g, entry, dx, dy);
             float fade = Mth.clamp((now - cell.appearStart) / (float) FADE_MS, 0f, 1f);
             if (fade < 1f) {
                 int a = Math.round((1f - fade) * 0xDD);

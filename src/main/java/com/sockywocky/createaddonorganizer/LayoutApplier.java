@@ -40,6 +40,9 @@ public final class LayoutApplier {
             applyRemovals(event, layout);
             return;
         }
+        boolean sectioned = layout.sectionCount() > 0;
+        boolean folding = !sectioned && !layout.safeItemGroups().isEmpty();
+        ResourceLocation foldKey = ItemGroupRuntime.flatKey(tabId);
         List<ItemStack> parent = new ArrayList<>(event.getParentEntries());
         if (parent.isEmpty() && layout.safeEntries().isEmpty()) {
             return;
@@ -55,31 +58,39 @@ public final class LayoutApplier {
 
         Set<String> removed = layout.removedSet();
         Set<String> placed = new HashSet<>();
-        List<ItemStack> ordered = new ArrayList<>(parent.size());
+        SectionStacks run = new SectionStacks();
         for (TabLayout.Entry entry : layout.safeEntries()) {
             if (!entry.isItem() || removed.contains(entry.item()) || !placed.add(entry.item())) {
                 continue;
             }
+            String groupId = folding ? entry.groupId() : null;
             List<ItemStack> existing = byId.get(entry.item());
             if (existing != null) {
-                ordered.addAll(existing);
+                run.add(groupId, existing);
                 continue;
             }
             ItemStack added = stackOf(entry.item());
             if (!added.isEmpty()) {
-                ordered.add(added);
+                run.add(groupId, List.of(added));
             }
         }
         for (Map.Entry<String, List<ItemStack>> e : byId.entrySet()) {
             if (!placed.contains(e.getKey()) && !removed.contains(e.getKey())) {
-                ordered.addAll(e.getValue());
+                run.add(null, e.getValue());
             }
+        }
+
+        Folded folded = run.fold(layout, foldKey);
+        if (folding) {
+            ItemGroupRuntime.register(foldKey, folded.folds());
+        } else {
+            ItemGroupRuntime.clear(foldKey);
         }
 
         for (ItemStack stack : parent) {
             event.remove(stack, CreativeModeTab.TabVisibility.PARENT_TAB_ONLY);
         }
-        for (ItemStack stack : ordered) {
+        for (ItemStack stack : folded.shown()) {
             CreativeModeTab.TabVisibility visibility = event.getSearchEntries().contains(stack)
                     ? CreativeModeTab.TabVisibility.PARENT_TAB_ONLY
                     : CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS;
@@ -87,6 +98,17 @@ public final class LayoutApplier {
                 event.accept(stack, visibility);
             } catch (IllegalArgumentException e) {
                 createaddonorganizer.LOGGER.debug("[CAO] could not re-add {} to {}", stack, tabId);
+            }
+        }
+        for (ItemStack stack : folded.hidden()) {
+            if (event.getSearchEntries().contains(stack)) {
+                continue;
+            }
+            try {
+                event.accept(stack, CreativeModeTab.TabVisibility.SEARCH_TAB_ONLY);
+            } catch (IllegalArgumentException e) {
+                createaddonorganizer.LOGGER.debug("[CAO] could not keep folded {} searchable on {}",
+                        stack, tabId);
             }
         }
     }
@@ -131,7 +153,8 @@ public final class LayoutApplier {
         String currentSource = null;
         String currentTitle = ownTitle;
         SectionStacks current = new SectionStacks();
-        Set<String> consumed = new HashSet<>(layout.removedSet());
+        Set<String> dropped = layout.removedSet();
+        Set<String> consumed = new HashSet<>(dropped);
         for (TabLayout.Entry entry : layout.safeEntries()) {
             if (entry.isSection()) {
                 if (!current.isEmpty() || isOwnHeader(layout, currentId, currentSource)) {
@@ -141,7 +164,8 @@ public final class LayoutApplier {
                 currentId = entry.section();
                 currentSource = entry.source();
                 currentTitle = entry.title() == null || entry.title().isBlank() ? "Section" : entry.title();
-            } else if (entry.isItem() && consumed.add(entry.item())) {
+            } else if (entry.isItem() && !dropped.contains(entry.item())) {
+                boolean firstCopy = consumed.add(entry.item());
                 List<ItemStack> stacks = byId.get(entry.item());
                 if (stacks == null) {
                     stacks = borrowed.get(entry.item());
@@ -150,7 +174,7 @@ public final class LayoutApplier {
                     ItemStack resolved = stackOf(entry.item());
                     stacks = resolved.isEmpty() ? List.of() : List.of(resolved);
                 }
-                current.add(entry.groupId(), stacks);
+                current.add(entry.groupId(), firstCopy ? stacks : freshCopies(stacks));
             }
         }
         if (!current.isEmpty() || out.isEmpty() || isOwnHeader(layout, currentId, currentSource)) {
@@ -164,6 +188,14 @@ public final class LayoutApplier {
             }
         }
         return withUnclaimed(layout, out, unclaimed, ownTitle);
+    }
+
+    private static List<ItemStack> freshCopies(List<ItemStack> stacks) {
+        List<ItemStack> out = new ArrayList<>(stacks.size());
+        for (ItemStack stack : stacks) {
+            out.add(stack.copy());
+        }
+        return out;
     }
 
     private static final class SectionStacks {
@@ -201,38 +233,60 @@ public final class LayoutApplier {
                 }
                 return new TabLayout.Group(sectionId, source, title, List.copyOf(plain), List.of());
             }
-            ResourceLocation resolvedSectionId = layout.idForGroup(shell);
-            List<ItemStack> stacks = new ArrayList<>(slots.size());
+            Folded folded = fold(layout, layout.idForGroup(shell));
+            return new TabLayout.Group(sectionId, source, title, folded.shown(), folded.folds());
+        }
+
+        private Folded fold(TabLayout layout, ResourceLocation runtimeKey) {
+            List<ItemStack> shown = new ArrayList<>(slots.size());
+            List<ItemStack> hidden = new ArrayList<>();
             List<ItemGroupRuntime.Fold> folds = new ArrayList<>(members.size());
             for (Object slot : slots) {
                 if (slot instanceof ItemStack stack) {
-                    stacks.add(stack);
+                    shown.add(stack);
                     continue;
                 }
                 String groupId = (String) slot;
-                List<ItemStack> owned = members.getOrDefault(groupId, List.of());
-                if (owned.size() < 2) {
-                    stacks.addAll(owned);
+                List<ItemStack> rest = new ArrayList<>(members.getOrDefault(groupId, List.of()));
+                if (rest.size() < 2) {
+                    shown.addAll(rest);
                     continue;
                 }
-                boolean open = ItemGroupRuntime.isOpen(resolvedSectionId, groupId);
+                int total = rest.size();
+                boolean open = ItemGroupRuntime.isOpen(runtimeKey, groupId);
                 TabLayout.ItemGroup def = layout.itemGroup(groupId);
+                ItemStack head = takeHead(layout, groupId, rest);
                 folds.add(new ItemGroupRuntime.Fold(groupId,
                         def == null ? "Group" : def.displayTitle(),
-                        stacks.size(), owned.size(), open));
-                stacks.add(groupIconStack(layout, groupId, owned));
+                        shown.size(), total, rest.size() < total, open));
+                shown.add(head);
                 if (open) {
-                    stacks.addAll(owned);
+                    shown.addAll(rest);
+                } else {
+                    hidden.addAll(rest);
                 }
             }
-            return new TabLayout.Group(sectionId, source, title, List.copyOf(stacks), List.copyOf(folds));
+            return new Folded(List.copyOf(shown), List.copyOf(hidden), List.copyOf(folds));
         }
     }
 
-    private static ItemStack groupIconStack(TabLayout layout, String groupId, List<ItemStack> members) {
+    private record Folded(List<ItemStack> shown, List<ItemStack> hidden,
+            List<ItemGroupRuntime.Fold> folds) {}
+
+    private static ItemStack takeHead(TabLayout layout, String groupId, List<ItemStack> owned) {
         String iconId = layout.iconItemOf(groupId);
-        ItemStack icon = iconId == null ? ItemStack.EMPTY : stackOf(iconId);
-        return icon.isEmpty() ? members.get(0).copy() : icon;
+        if (iconId != null) {
+            for (int i = 0; i < owned.size(); i++) {
+                if (iconId.equals(idOf(owned.get(i)))) {
+                    return owned.remove(i);
+                }
+            }
+            ItemStack icon = stackOf(iconId);
+            if (!icon.isEmpty()) {
+                return icon;
+            }
+        }
+        return owned.remove(0);
     }
 
     private static boolean isOwnHeader(TabLayout layout, Integer sectionId, String source) {
